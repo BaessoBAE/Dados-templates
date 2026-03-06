@@ -331,9 +331,10 @@ function renderGeral() {
 }
 
 function renderCampCards() {
-  document.getElementById('campCards').innerHTML = getCampaigns().map(c=>{
+  const camps = getCampaigns();
+  document.getElementById('campCards').innerHTML = camps.map((c, idx)=>{
     const s=calcStats(c.rows);
-    return`<div class="camp-card ${selectedCamp===c.name?'selected':''}" data-name="${c.name}" onclick="selectCamp(${JSON.stringify(c.name)})">
+    return`<div class="camp-card ${selectedCamp===c.name?'selected':''}" data-idx="${idx}" onclick="selectCampByIdx(${idx})">
       <div class="camp-name">${c.name}</div>
       <div class="camp-meta">${s.total.toLocaleString()} leads · ${[...new Set(c.rows.map(r=>r['Template']))].length} templates</div>
       <div class="camp-stats">
@@ -344,12 +345,19 @@ function renderCampCards() {
   }).join('');
 }
 
+function selectCampByIdx(idx) {
+  const camps = getCampaigns();
+  const camp = camps[idx];
+  if (!camp) return;
+  selectCamp(camp.name);
+}
+
 function selectCamp(name) {
   selectedCamp = name;
 
-  // Atualiza visual dos cards sem recriar tudo
+  // Atualiza visual dos cards
   document.querySelectorAll('.camp-card').forEach(el => {
-    el.classList.toggle('selected', el.dataset.name === name);
+    el.classList.toggle('selected', Number(el.dataset.idx) === getCampaigns().findIndex(c=>c.name===name));
   });
 
   const camp = getCampaigns().find(c=>c.name===name);

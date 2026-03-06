@@ -333,7 +333,7 @@ function renderGeral() {
 function renderCampCards() {
   document.getElementById('campCards').innerHTML = getCampaigns().map(c=>{
     const s=calcStats(c.rows);
-    return`<div class="camp-card ${selectedCamp===c.name?'selected':''}" onclick="selectCamp(${JSON.stringify(c.name)})">
+    return`<div class="camp-card ${selectedCamp===c.name?'selected':''}" data-name="${c.name}" onclick="selectCamp(${JSON.stringify(c.name)})">
       <div class="camp-name">${c.name}</div>
       <div class="camp-meta">${s.total.toLocaleString()} leads · ${[...new Set(c.rows.map(r=>r['Template']))].length} templates</div>
       <div class="camp-stats">
@@ -346,15 +346,26 @@ function renderCampCards() {
 
 function selectCamp(name) {
   selectedCamp = name;
-  renderCampCards();
+
+  // Atualiza visual dos cards sem recriar tudo
+  document.querySelectorAll('.camp-card').forEach(el => {
+    el.classList.toggle('selected', el.dataset.name === name);
+  });
+
   const camp = getCampaigns().find(c=>c.name===name);
   if (!camp) return;
+
   const map={};
   camp.rows.forEach(r=>{ const t=r['Template']; if(!map[t]) map[t]=[]; map[t].push(r); });
   const rows=Object.values(map).map(rs=>{const s=calcStats(rs);return{name:rs[0]['Template'],...s};}).sort((a,b)=>b.pok-a.pok);
-  document.getElementById('campDetail').innerHTML=`
+
+  const detail = document.getElementById('campDetail');
+  detail.innerHTML=`
     <div class="table-wrap">
-      <div class="table-top"><span class="table-top-title">Detalhe — ${name}</span><span style="font-size:11px;color:var(--muted)">🟢 ≥90% · 🟡 80–89% · 🔴 &lt;80%</span></div>
+      <div class="table-top">
+        <span class="table-top-title">📋 Detalhe — ${name}</span>
+        <span style="font-size:11px;color:var(--muted)">🟢 ≥90% · 🟡 80–89% · 🔴 &lt;80%</span>
+      </div>
       <div class="table-scroll"><table>
         <thead><tr><th>#</th><th>Template</th><th>Leads</th><th>Entregues</th><th>Engajados</th><th>Erros</th><th>% Entrega</th><th>% Eng.</th><th>Status</th></tr></thead>
         <tbody>${rows.map((r,i)=>`<tr>
@@ -366,6 +377,9 @@ function selectCamp(name) {
           <td style="color:${cEng(r.peng)};font-weight:500">${r.peng.toFixed(1)}%</td>
           <td>${bOk(r.pok)}</td></tr>`).join('')}
         </tbody></table></div></div>`;
+
+  // Rola suavemente para mostrar o detalhe
+  setTimeout(() => detail.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
 }
 
 function filterTmpl(f,btn) {

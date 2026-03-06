@@ -32,6 +32,7 @@
   .spinner{width:40px;height:40px;border:3px solid var(--border);border-top-color:var(--red);border-radius:50%;animation:spin .8s linear infinite}
   @keyframes spin{to{transform:rotate(360deg)}}
   .loading-text{color:var(--muted);font-size:14px}
+  .loading-sub{color:var(--muted);font-size:12px;opacity:.6}
   .error-box{background:rgba(236,0,0,.08);border:1px solid rgba(236,0,0,.3);border-radius:12px;padding:2rem;text-align:center}
   .error-box h3{color:#FF4040;font-family:'Syne',sans-serif;margin-bottom:.5rem}
   .error-box p{color:var(--muted);font-size:13px;line-height:1.7}
@@ -85,7 +86,6 @@
   .ii{display:flex;gap:9px;font-size:13px;line-height:1.5;color:#ccc;padding:9px 11px;background:var(--surface2);border-radius:7px;border-left:3px solid var(--border)}
   .ii.pos{border-left-color:var(--green)}.ii.crit{border-left-color:var(--red)}.ii.tip{border-left-color:var(--blue)}
   .iico{font-size:15px;flex-shrink:0;margin-top:1px}
-  /* CONFIG */
   .config-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.5rem;margin-bottom:1rem}
   .config-card h3{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;margin-bottom:1rem}
   .config-input{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--text);font-size:13px;font-family:'DM Sans',sans-serif;margin-bottom:.75rem;outline:none;transition:border-color .2s}
@@ -120,7 +120,7 @@
   <div class="tab" onclick="show('config',this)">⚙️ Configurar</div>
 </div>
 
-<div id="geral"     class="panel active content"><div id="geralContent"><div class="loading"><div class="spinner"></div><div class="loading-text">Buscando dados da planilha...</div></div></div></div>
+<div id="geral"     class="panel active content"><div id="geralContent"><div class="loading"><div class="spinner"></div><div class="loading-text">Buscando dados...</div><div class="loading-sub">Isso pode levar alguns segundos</div></div></div></div>
 <div id="campanhas" class="panel content">
   <div class="sec-title">Campanhas</div>
   <div class="sec-sub">Clique em uma campanha para ver o detalhe por template</div>
@@ -143,36 +143,30 @@
 <div id="config" class="panel content">
   <div class="sec-title">⚙️ Configuração</div>
   <div class="sec-sub">URL do CSV da Google Sheets</div>
-
   <div class="config-card">
     <h3>🔗 URL do CSV</h3>
     <input type="text" class="config-input" id="csvUrl" placeholder="https://docs.google.com/spreadsheets/d/e/XXXXX/pub?output=csv"/>
     <button class="config-btn" onclick="saveConfig()">Salvar e Conectar</button>
     <div style="font-size:12px;margin-top:.5rem" id="configNote"></div>
   </div>
-
   <div class="config-card">
     <h3>📋 Como adicionar novas campanhas</h3>
-    <div class="step"><div class="step-num">1</div><div class="step-text">Exporte o relatório da nova campanha do sistema (igual os .xlsx que você já tem)</div></div>
-    <div class="step"><div class="step-num">2</div><div class="step-text">Abra a Google Sheets e cole as linhas novas <strong>abaixo das anteriores</strong> na aba <span class="ic">Dados</span> — não apague nada</div></div>
-    <div class="step"><div class="step-num">3</div><div class="step-text">Volte no dashboard e clique em <strong>↻ Atualizar</strong> — pronto! 🎉</div></div>
-
-    <div style="margin-top:1rem;padding:12px;background:rgba(74,158,255,.08);border:1px solid rgba(74,158,255,.2);border-radius:8px;font-size:13px;color:#ccc;line-height:1.7">
-      💡 <strong style="color:var(--blue)">Dica:</strong> O dashboard detecta campanhas automaticamente pelo campo <span class="ic">Nome da Campanha</span>. Cada nome diferente vira uma campanha nova no painel.
-    </div>
-  </div>
-
-  <div class="config-card">
-    <h3>🚀 GitHub Pages</h3>
-    <div class="step"><div class="step-num">1</div><div class="step-text">Suba este arquivo como <span class="ic">index.html</span> no seu repositório GitHub</div></div>
-    <div class="step"><div class="step-num">2</div><div class="step-text">Vá em <strong>Settings → Pages → Branch: main → Save</strong></div></div>
-    <div class="step"><div class="step-num">3</div><div class="step-text">Dashboard disponível em <span class="ic">https://seuusuario.github.io/repositorio</span><br>A URL do CSV fica salva no navegador — configure uma vez e pronto!</div></div>
+    <div class="step"><div class="step-num">1</div><div class="step-text">Exporte o relatório da nova campanha do sistema</div></div>
+    <div class="step"><div class="step-num">2</div><div class="step-text">Cole as linhas novas <strong>abaixo das anteriores</strong> na aba <span class="ic">Dados</span> — não apague nada</div></div>
+    <div class="step"><div class="step-num">3</div><div class="step-text">Clique em <strong>↻ Atualizar</strong> no dashboard 🎉</div></div>
   </div>
 </div>
 
 <script>
-// ── URL padrão já embutida (pode ser sobrescrita na aba Config) ──
 const DEFAULT_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQf3O5GB-oOMC0e2vx5ek7S09M8G3YYHI165BvayKNmKT9c0fimdsvrMUnwBKsDoZa7YF6Z35kjg0yc/pub?output=csv';
+
+// Lista de proxies para tentar em sequência
+const PROXIES = [
+  url => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+  url => `https://corsproxy.io/?${encodeURIComponent(url)}`,
+  url => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
+  url => url  // tenta direto como último recurso
+];
 
 let CSV_URL = localStorage.getItem('ak_csv_url') || DEFAULT_CSV;
 let allData = [];
@@ -195,11 +189,8 @@ function note(msg,color){ const n=document.getElementById('configNote'); n.style
 function parseCSV(text) {
   const lines = text.split('\n').filter(l => l.trim());
   if (lines.length < 2) return [];
-
-  // parse respeitando campos com vírgula entre aspas
   function parseLine(line) {
-    const result = [];
-    let cur = '', inQ = false;
+    const result = []; let cur = '', inQ = false;
     for (let i = 0; i < line.length; i++) {
       const c = line[i];
       if (c === '"') { inQ = !inQ; continue; }
@@ -209,33 +200,52 @@ function parseCSV(text) {
     result.push(cur.trim());
     return result;
   }
-
   const headers = parseLine(lines[0]);
   return lines.slice(1).map(line => {
-    const vals = parseLine(line);
-    const obj = {};
-    headers.forEach((h, i) => obj[h] = (vals[i] || '').trim());
+    const vals = parseLine(line), obj = {};
+    headers.forEach((h,i) => obj[h] = (vals[i]||'').trim());
     return obj;
   }).filter(r => r['Nome da Campanha'] && r['Template']);
 }
 
-// ── LOAD ─────────────────────────────────────────────────────────
+// ── LOAD com fallback de proxies ─────────────────────────────────
 async function loadData() {
-  setStatus('Atualizando...', false);
-  try {
-    // Usar proxy para evitar CORS no GitHub Pages
-    const proxyUrl = 'https://corsproxy.io/?' + encodeURIComponent(CSV_URL);
-    const res = await fetch(proxyUrl);
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    const text = await res.text();
-    allData = parseCSV(text);
-    if (!allData.length) throw new Error('Nenhum dado encontrado na planilha.');
-    setStatus(`Atualizado ✓ — ${allData.length} registros`, true);
-    renderAll();
-  } catch(e) {
-    setStatus('Erro ao carregar', false);
-    renderGeralError(e.message);
+  setStatus('Carregando...', false);
+  showLoading();
+
+  for (let i = 0; i < PROXIES.length; i++) {
+    try {
+      const proxyUrl = PROXIES[i](CSV_URL);
+      const res = await fetch(proxyUrl, { signal: AbortSignal.timeout(15000) });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const text = await res.text();
+      if (!text || text.length < 10) throw new Error('Resposta vazia');
+      allData = parseCSV(text);
+      if (!allData.length) throw new Error('Nenhum dado válido encontrado.');
+      setStatus(`Atualizado ✓ — ${allData.length.toLocaleString()} registros`, true);
+      renderAll();
+      return;
+    } catch(e) {
+      console.warn(`Proxy ${i+1} falhou:`, e.message);
+      if (i < PROXIES.length - 1) {
+        setStatus(`Tentando alternativa ${i+2}/${PROXIES.length}...`, false);
+        await new Promise(r => setTimeout(r, 500));
+      }
+    }
   }
+
+  // todos os proxies falharam
+  setStatus('Erro ao carregar', false);
+  renderGeralError('Não foi possível acessar a planilha. Verifique se ela está publicada corretamente no Google Sheets (Arquivo → Compartilhar → Publicar na web).');
+}
+
+function showLoading() {
+  document.getElementById('geralContent').innerHTML = `
+    <div class="loading">
+      <div class="spinner"></div>
+      <div class="loading-text">Buscando dados da planilha...</div>
+      <div class="loading-sub">Tentando conectar, aguarde</div>
+    </div>`;
 }
 
 function setStatus(msg, ok) {
@@ -252,8 +262,7 @@ function pStatus(s) {
   return 'other';
 }
 function isEng(r) {
-  return (r['Engajado']||'').toLowerCase()==='sim'
-      || pStatus(r['Status do Lead'])==='engaged';
+  return (r['Engajado']||'').toLowerCase()==='sim' || pStatus(r['Status do Lead'])==='engaged';
 }
 function calcStats(rows) {
   const total     = rows.length;
@@ -275,14 +284,14 @@ function getTmplRank() {
   allData.forEach(r=>{ const t=r['Template']; if(!map[t]) map[t]={name:t,rows:[]}; map[t].rows.push(r); });
   return Object.values(map).map(t=>{
     const s=calcStats(t.rows);
-    return {...t,...s, rodadas:[...new Set(t.rows.map(r=>r['Nome da Campanha']))].length};
+    return {...t,...s,rodadas:[...new Set(t.rows.map(r=>r['Nome da Campanha']))].length};
   }).sort((a,b)=>b.pok-a.pok);
 }
 function cOk(v)  { return v>=90?'var(--green)':v>=80?'var(--amber)':'#FF4040'; }
 function cEng(v) { return v>=12?'var(--purple)':v>=7?'var(--blue)':'var(--muted)'; }
 function bOk(v)  { return v>=90?'<span class="badge bg">✓ Ótimo</span>':v>=80?'<span class="badge ba">~ Bom</span>':'<span class="badge br">✗ Revisar</span>'; }
 
-// ── RENDER GERAL ─────────────────────────────────────────────────
+// ── RENDERS ──────────────────────────────────────────────────────
 function renderAll() { renderGeral(); renderCampCards(); renderTemplates(); }
 
 function renderGeral() {
@@ -311,9 +320,8 @@ function renderGeral() {
       <div class="table-scroll"><table>
         <thead><tr><th>Campanha</th><th>Leads</th><th>% Entrega</th><th>% Engaj.</th><th>% Erro</th><th>Templates</th></tr></thead>
         <tbody>${camps.map(c=>{
-          const s=calcStats(c.rows), tmpl=[...new Set(c.rows.map(r=>r['Template']))].length;
-          return`<tr>
-            <td><strong>${c.name}</strong></td><td>${s.total}</td>
+          const s=calcStats(c.rows),tmpl=[...new Set(c.rows.map(r=>r['Template']))].length;
+          return`<tr><td><strong>${c.name}</strong></td><td>${s.total}</td>
             <td><span style="color:${cOk(s.pok)};font-weight:600">${s.pok.toFixed(1)}%</span></td>
             <td style="color:${cEng(s.peng)};font-weight:500">${s.peng.toFixed(1)}%</td>
             <td style="color:${s.perr>20?'#FF4040':'var(--muted)'}">${s.perr.toFixed(1)}%</td>
@@ -322,13 +330,12 @@ function renderGeral() {
       </table></div></div>`;
 }
 
-// ── RENDER CAMPANHAS ─────────────────────────────────────────────
 function renderCampCards() {
   document.getElementById('campCards').innerHTML = getCampaigns().map(c=>{
     const s=calcStats(c.rows);
     return`<div class="camp-card ${selectedCamp===c.name?'selected':''}" onclick="selectCamp(${JSON.stringify(c.name)})">
       <div class="camp-name">${c.name}</div>
-      <div class="camp-meta">${s.total} leads · ${[...new Set(c.rows.map(r=>r['Template']))].length} templates</div>
+      <div class="camp-meta">${s.total.toLocaleString()} leads · ${[...new Set(c.rows.map(r=>r['Template']))].length} templates</div>
       <div class="camp-stats">
         <div class="cs"><div class="cs-val" style="color:${cOk(s.pok)}">${s.pok.toFixed(0)}%</div><div class="cs-label">Entrega</div></div>
         <div class="cs"><div class="cs-val" style="color:var(--purple)">${s.peng.toFixed(0)}%</div><div class="cs-label">Engaj.</div></div>
@@ -361,7 +368,6 @@ function selectCamp(name) {
         </tbody></table></div></div>`;
 }
 
-// ── RENDER TEMPLATES ─────────────────────────────────────────────
 function filterTmpl(f,btn) {
   currentFilter=f;
   document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
@@ -370,8 +376,8 @@ function filterTmpl(f,btn) {
 }
 function renderTemplates() {
   let rank=getTmplRank();
-  if (currentFilter==='otimo')      rank=rank.filter(t=>t.pok>=90);
-  else if (currentFilter==='bom')   rank=rank.filter(t=>t.pok>=80&&t.pok<90);
+  if (currentFilter==='otimo') rank=rank.filter(t=>t.pok>=90);
+  else if (currentFilter==='bom') rank=rank.filter(t=>t.pok>=80&&t.pok<90);
   else if (currentFilter==='revisar') rank=rank.filter(t=>t.pok<80);
   document.getElementById('templatesContent').innerHTML=`
     <div class="table-wrap">
@@ -389,16 +395,14 @@ function renderTemplates() {
         </tbody></table></div></div>`;
 }
 
-// ── ERROR ────────────────────────────────────────────────────────
 function renderGeralError(msg) {
   document.getElementById('geralContent').innerHTML=`
     <div class="error-box"><h3>⚠️ Não foi possível carregar os dados</h3>
-    <p>Verifique se a planilha está publicada corretamente e a URL está configurada.<br>
-    Vá na aba <strong>⚙️ Configurar</strong> para atualizar a URL.<br><br>
+    <p>Verifique se a planilha está publicada corretamente.<br>
+    Vá na aba <strong>⚙️ Configurar</strong> para atualizar a URL se necessário.<br><br>
     <small style="opacity:.6">${msg||''}</small></p></div>`;
 }
 
-// ── TABS ─────────────────────────────────────────────────────────
 function show(id,tab) {
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
@@ -406,7 +410,6 @@ function show(id,tab) {
   tab.classList.add('active');
 }
 
-// Init
 loadData();
 </script>
 </body>

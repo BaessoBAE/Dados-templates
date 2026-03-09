@@ -650,38 +650,38 @@ function renderValores() {
   });
   const dias = Object.values(diasMap);
 
-  // Calcula valor por dia (total enviado * 0.43)
+  // Calcula valor por dia (somente entregues * 0.43 — erros não são cobrados)
   const labDias   = dias.map(d => d.label);
-  const valDia    = dias.map(d => parseFloat((d.all.length * PRECO).toFixed(2)));
-  const valManha  = dias.map(d => parseFloat((d.manha.length * PRECO).toFixed(2)));
-  const valTarde  = dias.map(d => parseFloat((d.tarde.length * PRECO).toFixed(2)));
+  const valDia    = dias.map(d => { const s=calcStats(d.all);   return parseFloat((s.entregues * PRECO).toFixed(2)); });
+  const valManha  = dias.map(d => { const s=calcStats(d.manha); return parseFloat((s.entregues * PRECO).toFixed(2)); });
+  const valTarde  = dias.map(d => { const s=calcStats(d.tarde); return parseFloat((s.entregues * PRECO).toFixed(2)); });
 
-  // Projeção: melhor e pior cenário baseado nos erros reais
+  // Projeção: melhor e pior cenário baseado nas taxas de entrega reais
+  const allPoks = camps.map(c => calcStats(c.rows).pok);
   const allPerrs = camps.map(c => calcStats(c.rows).perr);
   const minErr = Math.min(...allPerrs);
   const maxErr = Math.max(...allPerrs);
-  // 1000 envios/dia (500 manhã + 500 tarde)
-  const projBase   = LEADS_CAMPANHA * 2 * PRECO;
-  const projMelhor = parseFloat((projBase * (1 - minErr/100)).toFixed(2));
-  const projPior   = parseFloat((projBase * (1 - maxErr/100)).toFixed(2));
+  const maxPok = Math.max(...allPoks); // melhor entrega = mais cobrado
+  const minPok = Math.min(...allPoks); // pior entrega = menos cobrado
+  // 1000 envios/dia (500 manhã + 500 tarde) — cobra só o que entrega
+  const projMelhor = parseFloat((LEADS_CAMPANHA * 2 * maxPok / 100 * PRECO).toFixed(2));
+  const projPior   = parseFloat((LEADS_CAMPANHA * 2 * minPok / 100 * PRECO).toFixed(2));
   const projMedio  = parseFloat(((projMelhor + projPior) / 2).toFixed(2));
 
-  // Totais para cards
-  const totalGasto     = valDia.reduce((a,b)=>a+b, 0);
-  const mediaEntregaDia= dias.map(d=>{ const s=calcStats(d.all); return s.pok; });
-  const mediaOk        = mediaEntregaDia.reduce((a,b)=>a+b,0) / (mediaEntregaDia.length||1);
-  const totalEntregue  = parseFloat((totalGasto * mediaOk / 100).toFixed(2));
-  const custoLead      = allData.length ? parseFloat((totalGasto / allData.length).toFixed(4)) : 0;
+  // Totais reais
+  const totalGasto = valDia.reduce((a,b)=>a+b, 0);
+  const totalEnviado = dias.reduce((a,d)=>a+d.all.length, 0);
+  const totalEntregues = dias.reduce((a,d)=>a+calcStats(d.all).entregues, 0);
 
   el.innerHTML = `
     <div class="sec-title">💰 Análise Financeira</div>
     <div class="sec-sub">Valor por mensagem: R$ 0,43 · Base: 500 leads por campanha</div>
 
     <div class="metrics" style="margin-bottom:1.5rem">
-      <div class="mc g"><div class="mc-label">Total Investido</div><div class="mc-val">R$ ${totalGasto.toLocaleString('pt-BR',{minimumFractionDigits:2})}</div><div class="mc-note">${allData.length.toLocaleString()} mensagens</div></div>
-      <div class="mc b"><div class="mc-label">Custo / Mensagem</div><div class="mc-val">R$ 0,43</div><div class="mc-note">por envio realizado</div></div>
-      <div class="mc a"><div class="mc-label">Valor/Dia (1.000 env.)</div><div class="mc-val">R$ ${(LEADS_CAMPANHA*2*PRECO).toFixed(2)}</div><div class="mc-note">500 manhã + 500 tarde</div></div>
-      <div class="mc p"><div class="mc-label">Projeção Mensal (22d)</div><div class="mc-val">R$ ${(LEADS_CAMPANHA*2*PRECO*22).toLocaleString('pt-BR',{minimumFractionDigits:2})}</div><div class="mc-note">dias úteis estimados</div></div>
+      <div class="mc g"><div class="mc-label">Total Investido</div><div class="mc-val">R$ ${totalGasto.toLocaleString('pt-BR',{minimumFractionDigits:2})}</div><div class="mc-note">${totalEntregues.toLocaleString()} entregues cobradas</div></div>
+      <div class="mc b"><div class="mc-label">Custo / Mensagem</div><div class="mc-val">R$ 0,43</div><div class="mc-note">só entregues são cobradas</div></div>
+      <div class="mc a"><div class="mc-label">Economia nos Erros</div><div class="mc-val">R$ ${((totalEnviado - totalEntregues) * PRECO).toLocaleString('pt-BR',{minimumFractionDigits:2})}</div><div class="mc-note">${(totalEnviado - totalEntregues).toLocaleString()} msgs com erro (grátis)</div></div>
+      <div class="mc p"><div class="mc-label">Projeção Mensal (22d)</div><div class="mc-val">R$ ${(projMedio*22).toLocaleString('pt-BR',{minimumFractionDigits:2})}</div><div class="mc-note">baseado na média real</div></div>
     </div>
 
     <!-- Gráfico Valor Dia total -->
@@ -739,7 +739,7 @@ function renderValores() {
           titleColor: '#F0F0F0', bodyColor: '#aaa',
           callbacks: {
             label: ctx => ` R$ ${ctx.raw.toFixed(2)}`,
-            afterLabel: ctx => `Leads: ${Math.round(ctx.raw / PRECO).toLocaleString()}`
+            afterLabel: ctx => `Entregues: ${Math.round(ctx.raw / PRECO).toLocaleString()}`
           }
         }
       },

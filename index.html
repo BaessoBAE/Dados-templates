@@ -182,12 +182,13 @@
 const DEFAULT_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQf3O5GB-oOMC0e2vx5ek7S09M8G3YYHI165BvayKNmKT9c0fimdsvrMUnwBKsDoZa7YF6Z35kjg0yc/pub?output=csv';
 
 // Lista de proxies para tentar em sequência
+// Apps Script próprio como proxy principal — muito mais estável
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwqo3_OUM2TGxBl4faslddNxUN_SrkUfZhdcZry6FnZ8lAH-4E-nX7fJdYDREmat0ma/exec';
+
 const PROXIES = [
+  _url => `${APPS_SCRIPT_URL}?_=${Date.now()}`,  // proxy próprio — sempre funciona
   url => `https://corsproxy.io/?${encodeURIComponent(url)}&_=${Date.now()}`,
   url => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}&_=${Date.now()}`,
-  url => `https://thingproxy.freeboard.io/fetch/${url}&_=${Date.now()}`,
-  url => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
-  url => `https://corsproxy.io/?url=${encodeURIComponent(url)}`,
   url => url
 ];
 

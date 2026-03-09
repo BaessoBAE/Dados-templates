@@ -133,6 +133,7 @@
   <div class="tab active" onclick="show('geral',this)">📊 Visão Geral</div>
   <div class="tab" onclick="show('campanhas',this)">📅 Campanhas</div>
   <div class="tab" onclick="show('templates',this)">🏆 Templates</div>
+  <div class="tab" onclick="show('valores',this)">💰 Valores</div>
   <div class="tab" onclick="show('config',this)">⚙️ Configurar</div>
 </div>
 
@@ -154,6 +155,10 @@
     <button class="filter-btn" onclick="filterTmpl('revisar',this)">✗ Revisar (&lt;80%)</button>
   </div>
   <div id="templatesContent"></div>
+</div>
+
+<div id="valores" class="panel content">
+  <div id="valoresContent"><div class="loading"><div class="spinner"></div><div class="loading-text">Carregando análise financeira...</div></div></div>
 </div>
 
 <div id="config" class="panel content">
@@ -308,7 +313,7 @@ function cEng(v) { return v>=12?'var(--purple)':v>=7?'var(--blue)':'var(--muted)
 function bOk(v)  { return v>=90?'<span class="badge bg">✓ Ótimo</span>':v>=80?'<span class="badge ba">~ Bom</span>':'<span class="badge br">✗ Revisar</span>'; }
 
 // ── RENDERS ──────────────────────────────────────────────────────
-function renderAll() { renderGeral(); renderCampCards(); renderTemplates(); }
+function renderAll() { renderGeral(); renderCampCards(); renderTemplates(); renderValores(); }
 
 function getCampHorario(camp) {
   // Detecta manhã ou tarde pelo nome da campanha
@@ -382,6 +387,10 @@ function renderTodayCard(camp, tipo) {
 
 let chartEntrega = null;
 let chartErro = null;
+let chartValDia = null;
+let chartValManha = null;
+let chartValTarde = null;
+let chartProjecao = null;
 
 function renderGeral() {
   const camps=getCampaigns(), s=calcStats(allData), el=document.getElementById('geralContent');
@@ -619,6 +628,198 @@ function renderTemplates() {
         </tbody></table></div></div>`;
 }
 
+function renderValores() {
+  const el = document.getElementById('valoresContent');
+  if (!el || !allData.length) return;
+
+  const PRECO = 0.43;
+  const LEADS_CAMPANHA = 500;
+
+  // Agrupa por dia (DDMM) separando manhã e tarde
+  const camps = getCampaigns();
+  const diasMap = {};
+  camps.forEach(c => {
+    const match = c.name.match(/(\d{4})$/);
+    const key   = match ? match[1] : c.name;
+    const label = match ? match[1].replace(/(\d{2})(\d{2})/, '$1/$2') : c.name;
+    const tipo  = getCampHorario(c);
+    if (!diasMap[key]) diasMap[key] = { label, manha: [], tarde: [], all: [] };
+    diasMap[key].all.push(...c.rows);
+    if (tipo === 'manha') diasMap[key].manha.push(...c.rows);
+    if (tipo === 'tarde') diasMap[key].tarde.push(...c.rows);
+  });
+  const dias = Object.values(diasMap);
+
+  // Calcula valor por dia (total enviado * 0.43)
+  const labDias   = dias.map(d => d.label);
+  const valDia    = dias.map(d => parseFloat((d.all.length * PRECO).toFixed(2)));
+  const valManha  = dias.map(d => parseFloat((d.manha.length * PRECO).toFixed(2)));
+  const valTarde  = dias.map(d => parseFloat((d.tarde.length * PRECO).toFixed(2)));
+
+  // Projeção: melhor e pior cenário baseado nos erros reais
+  const allPerrs = camps.map(c => calcStats(c.rows).perr);
+  const minErr = Math.min(...allPerrs);
+  const maxErr = Math.max(...allPerrs);
+  // 1000 envios/dia (500 manhã + 500 tarde)
+  const projBase   = LEADS_CAMPANHA * 2 * PRECO;
+  const projMelhor = parseFloat((projBase * (1 - minErr/100)).toFixed(2));
+  const projPior   = parseFloat((projBase * (1 - maxErr/100)).toFixed(2));
+  const projMedio  = parseFloat(((projMelhor + projPior) / 2).toFixed(2));
+
+  // Totais para cards
+  const totalGasto     = valDia.reduce((a,b)=>a+b, 0);
+  const mediaEntregaDia= dias.map(d=>{ const s=calcStats(d.all); return s.pok; });
+  const mediaOk        = mediaEntregaDia.reduce((a,b)=>a+b,0) / (mediaEntregaDia.length||1);
+  const totalEntregue  = parseFloat((totalGasto * mediaOk / 100).toFixed(2));
+  const custoLead      = allData.length ? parseFloat((totalGasto / allData.length).toFixed(4)) : 0;
+
+  el.innerHTML = `
+    <div class="sec-title">💰 Análise Financeira</div>
+    <div class="sec-sub">Valor por mensagem: R$ 0,43 · Base: 500 leads por campanha</div>
+
+    <div class="metrics" style="margin-bottom:1.5rem">
+      <div class="mc g"><div class="mc-label">Total Investido</div><div class="mc-val">R$ ${totalGasto.toLocaleString('pt-BR',{minimumFractionDigits:2})}</div><div class="mc-note">${allData.length.toLocaleString()} mensagens</div></div>
+      <div class="mc b"><div class="mc-label">Custo / Mensagem</div><div class="mc-val">R$ 0,43</div><div class="mc-note">por envio realizado</div></div>
+      <div class="mc a"><div class="mc-label">Valor/Dia (1.000 env.)</div><div class="mc-val">R$ ${(LEADS_CAMPANHA*2*PRECO).toFixed(2)}</div><div class="mc-note">500 manhã + 500 tarde</div></div>
+      <div class="mc p"><div class="mc-label">Projeção Mensal (22d)</div><div class="mc-val">R$ ${(LEADS_CAMPANHA*2*PRECO*22).toLocaleString('pt-BR',{minimumFractionDigits:2})}</div><div class="mc-note">dias úteis estimados</div></div>
+    </div>
+
+    <!-- Gráfico Valor Dia total -->
+    <div class="chart-card" style="margin-bottom:1rem">
+      <div class="chart-title">💸 Valor Dia — Total investido por dia</div>
+      <div class="chart-wrap" style="height:200px"><canvas id="cvValDia"></canvas></div>
+    </div>
+
+    <!-- Gráfico Projeção -->
+    <div class="chart-card" style="margin-bottom:1rem">
+      <div class="chart-title">🎯 Projeção de Valor Dia <span style="font-size:11px;color:var(--muted);font-weight:400">— baseado na variação de erro real (${minErr.toFixed(1)}% melhor · ${maxErr.toFixed(1)}% pior)</span></div>
+      <div style="display:flex;gap:1rem;margin-bottom:1rem;flex-wrap:wrap">
+        <div style="background:rgba(0,201,122,.1);border:1px solid rgba(0,201,122,.3);border-radius:8px;padding:.6rem 1rem;flex:1;min-width:140px">
+          <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px">Melhor Cenário (erro ${minErr.toFixed(1)}%)</div>
+          <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:700;color:var(--green)">R$ ${projMelhor.toFixed(2)}</div>
+          <div style="font-size:11px;color:var(--muted)">em mensagens entregues</div>
+        </div>
+        <div style="background:rgba(167,139,250,.1);border:1px solid rgba(167,139,250,.3);border-radius:8px;padding:.6rem 1rem;flex:1;min-width:140px">
+          <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px">Cenário Médio</div>
+          <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:700;color:var(--purple)">R$ ${projMedio.toFixed(2)}</div>
+          <div style="font-size:11px;color:var(--muted)">estimativa central</div>
+        </div>
+        <div style="background:rgba(236,0,0,.08);border:1px solid rgba(236,0,0,.25);border-radius:8px;padding:.6rem 1rem;flex:1;min-width:140px">
+          <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px">Pior Cenário (erro ${maxErr.toFixed(1)}%)</div>
+          <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:700;color:#FF4040">R$ ${projPior.toFixed(2)}</div>
+          <div style="font-size:11px;color:var(--muted)">em mensagens entregues</div>
+        </div>
+      </div>
+      <div class="chart-wrap" style="height:180px"><canvas id="cvProjecao"></canvas></div>
+    </div>
+
+    <!-- Manhã vs Tarde -->
+    <div class="chart-grid">
+      <div class="chart-card">
+        <div class="chart-title">🌅 Valor Dia — Manhã</div>
+        <div class="chart-wrap" style="height:190px"><canvas id="cvValManha"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">🌆 Valor Dia — Tarde</div>
+        <div class="chart-wrap" style="height:190px"><canvas id="cvValTarde"></canvas></div>
+      </div>
+    </div>`;
+
+  setTimeout(() => {
+    // Destroi charts anteriores
+    [chartValDia, chartValManha, chartValTarde, chartProjecao].forEach(c => { if(c) c.destroy(); });
+
+    const baseLineOpts = (color, bgColor, yLabel) => ({
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#1C1C1C', borderColor: '#2A2A2A', borderWidth: 1,
+          titleColor: '#F0F0F0', bodyColor: '#aaa',
+          callbacks: {
+            label: ctx => ` R$ ${ctx.raw.toFixed(2)}`,
+            afterLabel: ctx => `Leads: ${Math.round(ctx.raw / PRECO).toLocaleString()}`
+          }
+        }
+      },
+      scales: {
+        x: { ticks: { color: '#555', font: { size: 11 } }, grid: { color: '#1A1A1A' } },
+        y: {
+          ticks: { color: '#555', font: { size: 10 }, callback: v => 'R$ ' + v.toFixed(0) },
+          grid: { color: '#1E1E1E' }, min: 0
+        }
+      }
+    });
+
+    const makeLine = (canvasId, labels, data, color, bgColor) => new Chart(document.getElementById(canvasId), {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [{ data, borderColor: color, backgroundColor: bgColor,
+          pointBackgroundColor: color, pointBorderColor: '#0A0A0A',
+          pointRadius: 6, pointHoverRadius: 8, borderWidth: 2.5, tension: 0.35, fill: true }]
+      },
+      options: baseLineOpts(color, bgColor)
+    });
+
+    chartValDia   = makeLine('cvValDia',   labDias, valDia,   '#A78BFA', 'rgba(167,139,250,.08)');
+    chartValManha = makeLine('cvValManha', labDias, valManha, '#4A9EFF', 'rgba(74,158,255,.08)');
+    chartValTarde = makeLine('cvValTarde', labDias, valTarde, '#F5A623', 'rgba(245,166,35,.08)');
+
+    // Projeção: banda entre melhor e pior
+    chartProjecao = new Chart(document.getElementById('cvProjecao'), {
+      type: 'line',
+      data: {
+        labels: labDias.length ? labDias : ['Próximas campanhas'],
+        datasets: [
+          {
+            label: 'Melhor cenário',
+            data: labDias.map(() => projMelhor),
+            borderColor: '#00C97A', borderDash: [6,3], borderWidth: 2,
+            pointRadius: 0, backgroundColor: 'rgba(0,201,122,.06)', fill: '+1', tension: 0
+          },
+          {
+            label: 'Pior cenário',
+            data: labDias.map(() => projPior),
+            borderColor: '#EC0000', borderDash: [6,3], borderWidth: 2,
+            pointRadius: 0, backgroundColor: 'rgba(236,0,0,.06)', fill: false, tension: 0
+          },
+          {
+            label: 'Real',
+            data: valDia,
+            borderColor: '#A78BFA', borderWidth: 2.5,
+            pointBackgroundColor: '#A78BFA', pointBorderColor: '#0A0A0A',
+            pointRadius: 6, pointHoverRadius: 8,
+            backgroundColor: 'rgba(167,139,250,.08)', fill: false, tension: 0.35
+          }
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            display: true,
+            labels: { color: '#777', font: { size: 11 }, boxWidth: 20, padding: 14 }
+          },
+          tooltip: {
+            backgroundColor: '#1C1C1C', borderColor: '#2A2A2A', borderWidth: 1,
+            titleColor: '#F0F0F0', bodyColor: '#aaa',
+            callbacks: { label: ctx => ` ${ctx.dataset.label}: R$ ${ctx.raw.toFixed(2)}` }
+          }
+        },
+        scales: {
+          x: { ticks: { color: '#555', font: { size: 11 } }, grid: { color: '#1A1A1A' } },
+          y: {
+            ticks: { color: '#555', font: { size: 10 }, callback: v => 'R$ ' + v.toFixed(0) },
+            grid: { color: '#1E1E1E' }, min: 0
+          }
+        }
+      }
+    });
+  }, 80);
+}
+
 function renderGeralError(msg) {
   document.getElementById('geralContent').innerHTML=`
     <div class="error-box"><h3>⚠️ Não foi possível carregar os dados</h3>
@@ -632,6 +833,7 @@ function show(id,tab) {
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   document.getElementById(id).classList.add('active');
   tab.classList.add('active');
+  if (id === 'valores' && allData.length) renderValores();
 }
 
 loadData();

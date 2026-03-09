@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Dashboard Campanhas — Almeida Krüger</title>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
   :root{--red:#EC0000;--bg:#0A0A0A;--surface:#141414;--surface2:#1C1C1C;--border:#2A2A2A;--text:#F0F0F0;--muted:#777;--green:#00C97A;--amber:#F5A623;--blue:#4A9EFF;--purple:#A78BFA;}
   *{margin:0;padding:0;box-sizing:border-box}
@@ -96,7 +97,22 @@
   .step-text{font-size:13px;color:#ccc;line-height:1.7}
   .step-text strong{color:var(--text)}
   .ic{background:var(--surface2);padding:2px 7px;border-radius:4px;font-family:monospace;font-size:12px;color:var(--amber);border:1px solid var(--border)}
-  @media(max-width:768px){.metrics{grid-template-columns:1fr 1fr}.igrid{grid-template-columns:1fr}.content{padding:1.2rem}header{padding:0 1.2rem}.tabs{padding:0 1.2rem}}
+  .chart-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.5rem}
+  .chart-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.4rem}
+  .chart-title{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;margin-bottom:1.2rem}
+  .chart-wrap{position:relative;height:220px}
+  .today-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:1.5rem}
+  .today-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.2rem 1.4rem;position:relative;overflow:hidden}
+  .today-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
+  .today-card.r::before{background:var(--red)}.today-card.g::before{background:var(--green)}.today-card.a::before{background:var(--amber)}.today-card.p::before{background:var(--purple)}.today-card.b::before{background:var(--blue)}
+  .today-label{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:6px}
+  .today-val{font-family:'Syne',sans-serif;font-size:26px;font-weight:700;line-height:1;margin-bottom:4px}
+  .today-card.r .today-val{color:#FF4040}.today-card.g .today-val{color:var(--green)}.today-card.a .today-val{color:var(--amber)}.today-card.p .today-val{color:var(--purple)}.today-card.b .today-val{color:var(--blue)}
+  .today-note{font-size:11px;color:var(--muted)}
+  .today-header{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;margin-bottom:1rem;display:flex;align-items:center;gap:8px}
+  .today-section{background:var(--surface);border:1px solid rgba(74,158,255,.3);border-radius:12px;padding:1.4rem;margin-bottom:1.5rem;position:relative;overflow:hidden}
+  .today-section::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--blue),var(--purple))}
+  @media(max-width:768px){.metrics{grid-template-columns:1fr 1fr}.igrid{grid-template-columns:1fr}.chart-grid{grid-template-columns:1fr}.today-grid{grid-template-columns:1fr 1fr}.content{padding:1.2rem}header{padding:0 1.2rem}.tabs{padding:0 1.2rem}}
 </style>
 </head>
 <body>
@@ -162,10 +178,10 @@ const DEFAULT_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQf3O5GB-oO
 
 // Lista de proxies para tentar em sequência
 const PROXIES = [
-  url => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
-  url => `https://corsproxy.io/?${encodeURIComponent(url)}`,
-  url => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
-  url => url  // tenta direto como último recurso
+  url => `https://api.allorigins.win/raw?url=${encodeURIComponent(url + '&t=' + Date.now())}`,
+  url => `https://corsproxy.io/?${encodeURIComponent(url + '&t=' + Date.now())}`,
+  url => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url + '&t=' + Date.now())}`,
+  url => url + '&t=' + Date.now()
 ];
 
 let CSV_URL = localStorage.getItem('ak_csv_url') || DEFAULT_CSV;
@@ -216,7 +232,7 @@ async function loadData() {
   for (let i = 0; i < PROXIES.length; i++) {
     try {
       const proxyUrl = PROXIES[i](CSV_URL);
-      const res = await fetch(proxyUrl, { signal: AbortSignal.timeout(15000) });
+      const res = await fetch(proxyUrl, { signal: AbortSignal.timeout(15000), cache: 'no-store' });
       if (!res.ok) throw new Error('HTTP ' + res.status);
       const text = await res.text();
       if (!text || text.length < 10) throw new Error('Resposta vazia');
@@ -294,19 +310,58 @@ function bOk(v)  { return v>=90?'<span class="badge bg">✓ Ótimo</span>':v>=80
 // ── RENDERS ──────────────────────────────────────────────────────
 function renderAll() { renderGeral(); renderCampCards(); renderTemplates(); }
 
+function getTodayCampaign() {
+  // Pega a campanha mais recente (última adicionada)
+  const camps = getCampaigns();
+  return camps.length ? camps[camps.length - 1] : null;
+}
+
+function getCampByDate() {
+  // Agrupa campanhas por data extraída do nome (ex: 0403, 0503)
+  const camps = getCampaigns();
+  return camps.map(c => {
+    const s = calcStats(c.rows);
+    // Extrai data do nome da campanha
+    const match = c.name.match(/(\d{4})$/);
+    const dateLabel = match ? match[1].replace(/(\d{2})(\d{2})/, '$1/$2') : c.name;
+    return { ...c, ...s, dateLabel };
+  });
+}
+
+let chartEntrega = null;
+let chartErro = null;
+
 function renderGeral() {
   const camps=getCampaigns(), s=calcStats(allData), el=document.getElementById('geralContent');
   if (!allData.length) { renderGeralError('Nenhum dado.'); return; }
   const rank=getTmplRank(), top3=rank.slice(0,3), bot=rank.filter(t=>t.pok<80).slice(0,3);
+  const today = getTodayCampaign();
+  const todayStats = today ? calcStats(today.rows) : null;
+  const campsByDate = getCampByDate();
+
   el.innerHTML=`
-    <div class="sec-title">Visão Geral</div>
-    <div class="sec-sub">Acumulado de ${camps.length} campanha(s) · ${s.total.toLocaleString()} leads</div>
+    ${today && todayStats ? `
+    <div class="today-section">
+      <div class="today-header">📅 Campanha Mais Recente — <span style="color:var(--blue)">${today.name}</span></div>
+      <div class="today-grid">
+        <div class="today-card r"><div class="today-label">Total de Leads</div><div class="today-val">${todayStats.total.toLocaleString()}</div><div class="today-note">${[...new Set(today.rows.map(r=>r['Template']))].length} templates</div></div>
+        <div class="today-card g"><div class="today-label">Taxa de Entrega</div><div class="today-val">${todayStats.pok.toFixed(1)}%</div><div class="today-note">${todayStats.entregues.toLocaleString()} entregues</div></div>
+        <div class="today-card p"><div class="today-label">Engajamento</div><div class="today-val">${todayStats.peng.toFixed(1)}%</div><div class="today-note">${todayStats.engajados.toLocaleString()} engajados</div></div>
+        <div class="today-card a"><div class="today-label">Taxa de Erro</div><div class="today-val">${todayStats.perr.toFixed(1)}%</div><div class="today-note">${todayStats.erros.toLocaleString()} falhas</div></div>
+        <div class="today-card b"><div class="today-label">Engaj. / Entregues</div><div class="today-val">${todayStats.entregues?(todayStats.engajados/todayStats.entregues*100).toFixed(1):0}%</div><div class="today-note">dos que receberam</div></div>
+        <div class="today-card r" style="--red:var(--green)"><div class="today-label">Leads sem Erro</div><div class="today-val" style="color:var(--green)">${(todayStats.total - todayStats.erros).toLocaleString()}</div><div class="today-note">alcançados</div></div>
+      </div>
+    </div>` : ''}
+
+    <div class="sec-title">Visão Geral — Acumulado</div>
+    <div class="sec-sub">${camps.length} campanha(s) · ${s.total.toLocaleString()} leads no total</div>
     <div class="metrics">
       <div class="mc r"><div class="mc-label">Total de Leads</div><div class="mc-val">${s.total.toLocaleString()}</div><div class="mc-note">${camps.length} campanhas</div></div>
       <div class="mc g"><div class="mc-label">Taxa de Entrega</div><div class="mc-val">${s.pok.toFixed(1)}%</div><div class="mc-note">${s.entregues.toLocaleString()} entregues</div></div>
       <div class="mc p"><div class="mc-label">Engajamento</div><div class="mc-val">${s.peng.toFixed(1)}%</div><div class="mc-note">${s.engajados.toLocaleString()} engajados</div></div>
       <div class="mc a"><div class="mc-label">Taxa de Erro</div><div class="mc-val">${s.perr.toFixed(1)}%</div><div class="mc-note">${s.erros.toLocaleString()} falhas</div></div>
     </div>
+
     <div class="igrid">
       <div class="icard"><h3><span class="dot dg"></span>Top Templates</h3><ul class="ilist">
         ${top3.map((t,i)=>`<li class="ii pos"><span class="iico">${['🥇','🥈','🥉'][i]}</span><strong>${t.name}</strong> — ${t.pok.toFixed(1)}% entrega · ${t.peng.toFixed(1)}% eng.</li>`).join('')}
@@ -315,7 +370,8 @@ function renderGeral() {
         ${bot.length?bot.map(t=>`<li class="ii crit"><span class="iico">🔴</span><strong>${t.name}</strong> — ${t.pok.toFixed(1)}% entrega · ${t.perr.toFixed(1)}% erro</li>`).join(''):'<li class="ii pos"><span class="iico">✅</span>Todos os templates acima de 80%!</li>'}
       </ul></div>
     </div>
-    <div class="table-wrap">
+
+    <div class="table-wrap" style="margin-bottom:1.5rem">
       <div class="table-top"><span class="table-top-title">Resumo por Campanha</span></div>
       <div class="table-scroll"><table>
         <thead><tr><th>Campanha</th><th>Leads</th><th>% Entrega</th><th>% Engaj.</th><th>% Erro</th><th>Templates</th></tr></thead>
@@ -327,9 +383,118 @@ function renderGeral() {
             <td style="color:${s.perr>20?'#FF4040':'var(--muted)'}">${s.perr.toFixed(1)}%</td>
             <td>${tmpl}</td></tr>`;
         }).join('')}</tbody>
-      </table></div></div>`;
+      </table></div>
+    </div>
+
+    <div class="chart-grid">
+      <div class="chart-card">
+        <div class="chart-title">📈 % Entrega por Campanha</div>
+        <div class="chart-wrap"><canvas id="chartEntrega"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">❌ % Erro por Campanha</div>
+        <div class="chart-wrap"><canvas id="chartErro"></canvas></div>
+      </div>
+    </div>`;
+
+  // Renderiza gráficos após o HTML estar no DOM
+  setTimeout(() => renderCharts(campsByDate), 50);
 }
 
+function renderCharts(camps) {
+  const labels = camps.map(c => c.name.replace('whats ','').replace('geral ',''));
+  const deliveries = camps.map(c => parseFloat(c.pok.toFixed(1)));
+  const errors = camps.map(c => parseFloat(c.perr.toFixed(1)));
+  const totals = camps.map(c => c.total);
+
+  const baseOpts = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: '#1C1C1C',
+        borderColor: '#2A2A2A',
+        borderWidth: 1,
+        titleColor: '#F0F0F0',
+        bodyColor: '#777',
+        callbacks: {
+          afterLabel: (ctx) => `Leads: ${totals[ctx.dataIndex].toLocaleString()}`
+        }
+      }
+    },
+    scales: {
+      x: {
+        ticks: { color: '#555', font: { size: 10 }, maxRotation: 35 },
+        grid: { color: '#1C1C1C' }
+      },
+      y: {
+        ticks: { color: '#555', font: { size: 10 }, callback: v => v + '%' },
+        grid: { color: '#222' },
+        min: 0, max: 100
+      }
+    }
+  };
+
+  // Destrói gráficos anteriores se existirem
+  if (chartEntrega) chartEntrega.destroy();
+  if (chartErro) chartErro.destroy();
+
+  const c1 = document.getElementById('chartEntrega');
+  const c2 = document.getElementById('chartErro');
+  if (!c1 || !c2) return;
+
+  chartEntrega = new Chart(c1, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        data: deliveries,
+        backgroundColor: deliveries.map(v => v >= 90 ? 'rgba(0,201,122,.7)' : v >= 80 ? 'rgba(245,166,35,.7)' : 'rgba(236,0,0,.5)'),
+        borderColor:      deliveries.map(v => v >= 90 ? '#00C97A' : v >= 80 ? '#F5A623' : '#EC0000'),
+        borderWidth: 1,
+        borderRadius: 4,
+      }]
+    },
+    options: { ...baseOpts,
+      plugins: { ...baseOpts.plugins,
+        tooltip: { ...baseOpts.plugins.tooltip,
+          callbacks: {
+            label: ctx => ` ${ctx.raw}% de entrega`,
+            afterLabel: ctx => `Leads: ${totals[ctx.dataIndex].toLocaleString()}`
+          }
+        }
+      }
+    }
+  });
+
+  chartErro = new Chart(c2, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        data: errors,
+        backgroundColor: errors.map(v => v > 25 ? 'rgba(236,0,0,.7)' : v > 15 ? 'rgba(245,166,35,.6)' : 'rgba(74,158,255,.5)'),
+        borderColor:      errors.map(v => v > 25 ? '#EC0000' : v > 15 ? '#F5A623' : '#4A9EFF'),
+        borderWidth: 1,
+        borderRadius: 4,
+      }]
+    },
+    options: { ...baseOpts,
+      scales: { ...baseOpts.scales,
+        y: { ...baseOpts.scales.y, max: Math.min(100, Math.max(...errors) + 10) }
+      },
+      plugins: { ...baseOpts.plugins,
+        tooltip: { ...baseOpts.plugins.tooltip,
+          callbacks: {
+            label: ctx => ` ${ctx.raw}% de erro`,
+            afterLabel: ctx => `Falhas: ${Math.round(totals[ctx.dataIndex] * ctx.raw / 100).toLocaleString()}`
+          }
+        }
+      }
+    }
+  });
+}
 function renderCampCards() {
   const camps = getCampaigns();
   document.getElementById('campCards').innerHTML = camps.map((c, idx)=>{

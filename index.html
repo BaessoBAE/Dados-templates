@@ -668,32 +668,31 @@ function renderValores() {
   });
   const dias = Object.values(diasMap);
 
-  // Calcula valor por dia (somente entregues * 0.43 — erros não são cobrados)
-  const labDias   = dias.map(d => d.label);
-  const valDia    = dias.map(d => { const s=calcStats(d.all);   return parseFloat((s.entregues * PRECO).toFixed(2)); });
-  const valManha  = dias.map(d => { const s=calcStats(d.manha); return parseFloat((s.entregues * PRECO).toFixed(2)); });
-  const valTarde  = dias.map(d => { const s=calcStats(d.tarde); return parseFloat((s.entregues * PRECO).toFixed(2)); });
+  // Calcula valor por dia (somente entregues * 0.43)
+  const labDias  = dias.map(d => d.label);
+  const valDia   = dias.map(d => { const s=calcStats(d.all);   return parseFloat((s.entregues * PRECO).toFixed(2)); });
+  const valManha = dias.map(d => { const s=calcStats(d.manha); return parseFloat((s.entregues * PRECO).toFixed(2)); });
+  const valTarde = dias.map(d => { const s=calcStats(d.tarde); return parseFloat((s.entregues * PRECO).toFixed(2)); });
 
-  // Projeção: melhor e pior cenário baseado nas taxas de entrega reais
-  const allPoks = camps.map(c => calcStats(c.rows).pok);
+  // Projeção baseada nas taxas reais
+  const allPoks  = camps.map(c => calcStats(c.rows).pok);
   const allPerrs = camps.map(c => calcStats(c.rows).perr);
-  const minErr = Math.min(...allPerrs);
-  const maxErr = Math.max(...allPerrs);
-  const maxPok = Math.max(...allPoks); // melhor entrega = mais cobrado
-  const minPok = Math.min(...allPoks); // pior entrega = menos cobrado
-  // 1000 envios/dia (500 manhã + 500 tarde) — cobra só o que entrega
+  const minErr   = Math.min(...allPerrs);
+  const maxErr   = Math.max(...allPerrs);
+  const maxPok   = Math.max(...allPoks);
+  const minPok   = Math.min(...allPoks);
   const projMelhor = parseFloat((LEADS_CAMPANHA * 2 * maxPok / 100 * PRECO).toFixed(2));
   const projPior   = parseFloat((LEADS_CAMPANHA * 2 * minPok / 100 * PRECO).toFixed(2));
   const projMedio  = parseFloat(((projMelhor + projPior) / 2).toFixed(2));
 
   // Totais reais
-  const totalGasto = valDia.reduce((a,b)=>a+b, 0);
-  const totalEnviado = dias.reduce((a,d)=>a+d.all.length, 0);
+  const totalGasto     = valDia.reduce((a,b)=>a+b, 0);
+  const totalEnviado   = dias.reduce((a,d)=>a+d.all.length, 0);
   const totalEntregues = dias.reduce((a,d)=>a+calcStats(d.all).entregues, 0);
 
   el.innerHTML = `
     <div class="sec-title">💰 Análise Financeira</div>
-    <div class="sec-sub">Valor por mensagem: R$ 0,43 · Base: 500 leads por campanha</div>
+    <div class="sec-sub">Valor por mensagem: R$ 0,43 · Cobrado somente nas entregues · Base: 500 leads por campanha</div>
 
     <div class="metrics" style="margin-bottom:1.5rem">
       <div class="mc g"><div class="mc-label">Total Investido</div><div class="mc-val">R$ ${totalGasto.toLocaleString('pt-BR',{minimumFractionDigits:2})}</div><div class="mc-note">${totalEntregues.toLocaleString()} entregues cobradas</div></div>
@@ -710,30 +709,25 @@ function renderValores() {
 
     <!-- Gráfico Projeção -->
     <div class="chart-card" style="margin-bottom:1rem">
-      <div class="chart-title">🎯 Projeção até Fim do Mês <span style="font-size:11px;color:var(--muted);font-weight:400">— dias já realizados + estimativa para os restantes</span></div>
+      <div class="chart-title">🎯 Projeção de Valor Dia <span style="font-size:11px;color:var(--muted);font-weight:400">— variação: R$ ${projPior.toFixed(2)} (${minPok.toFixed(1)}% entrega) até R$ ${projMelhor.toFixed(2)} (${maxPok.toFixed(1)}% entrega)</span></div>
       <div style="display:flex;gap:1rem;margin-bottom:1rem;flex-wrap:wrap">
-        <div style="background:rgba(245,166,35,.1);border:1px solid rgba(245,166,35,.3);border-radius:8px;padding:.6rem 1rem;flex:1;min-width:140px">
-          <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px">Gasto até hoje</div>
-          <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:700;color:var(--amber)">R$ ${totalGasto.toLocaleString('pt-BR',{minimumFractionDigits:2})}</div>
-          <div style="font-size:11px;color:var(--muted)">${diasComCampanha} dias realizados</div>
-        </div>
         <div style="background:rgba(0,201,122,.1);border:1px solid rgba(0,201,122,.3);border-radius:8px;padding:.6rem 1rem;flex:1;min-width:140px">
-          <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px">Fim do mês 🟢 Melhor</div>
-          <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:700;color:var(--green)">R$ ${totalProjMelhor.toLocaleString('pt-BR',{minimumFractionDigits:2})}</div>
-          <div style="font-size:11px;color:var(--muted)">${minErr.toFixed(1)}% erro · ${maxPok.toFixed(1)}% entrega</div>
+          <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px">Melhor Cenário (${minErr.toFixed(1)}% erro)</div>
+          <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:700;color:var(--green)">R$ ${projMelhor.toFixed(2)}</div>
+          <div style="font-size:11px;color:var(--muted)">por dia com 1.000 envios</div>
         </div>
         <div style="background:rgba(167,139,250,.1);border:1px solid rgba(167,139,250,.3);border-radius:8px;padding:.6rem 1rem;flex:1;min-width:140px">
-          <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px">Fim do mês ⚪ Médio</div>
-          <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:700;color:var(--purple)">R$ ${totalProjFimMes.toLocaleString('pt-BR',{minimumFractionDigits:2})}</div>
+          <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px">Cenário Médio</div>
+          <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:700;color:var(--purple)">R$ ${projMedio.toFixed(2)}</div>
           <div style="font-size:11px;color:var(--muted)">estimativa central</div>
         </div>
         <div style="background:rgba(236,0,0,.08);border:1px solid rgba(236,0,0,.25);border-radius:8px;padding:.6rem 1rem;flex:1;min-width:140px">
-          <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px">Fim do mês 🔴 Pior</div>
-          <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:700;color:#FF4040">R$ ${totalProjPior.toLocaleString('pt-BR',{minimumFractionDigits:2})}</div>
-          <div style="font-size:11px;color:var(--muted)">${maxErr.toFixed(1)}% erro · ${minPok.toFixed(1)}% entrega</div>
+          <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px">Pior Cenário (${maxErr.toFixed(1)}% erro)</div>
+          <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:700;color:#FF4040">R$ ${projPior.toFixed(2)}</div>
+          <div style="font-size:11px;color:var(--muted)">por dia com 1.000 envios</div>
         </div>
       </div>
-      <div class="chart-wrap" style="height:220px"><canvas id="cvProjecao"></canvas></div>
+      <div class="chart-wrap" style="height:180px"><canvas id="cvProjecao"></canvas></div>
     </div>
 
     <!-- Manhã vs Tarde -->
@@ -749,31 +743,7 @@ function renderValores() {
     </div>`;
 
   setTimeout(() => {
-    // Destroi charts anteriores
     [chartValDia, chartValManha, chartValTarde, chartProjecao].forEach(c => { if(c) c.destroy(); });
-
-    const baseLineOpts = (color, bgColor, yLabel) => ({
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: { display: false },
-        tooltip: {
-          backgroundColor: '#1C1C1C', borderColor: '#2A2A2A', borderWidth: 1,
-          titleColor: '#F0F0F0', bodyColor: '#aaa',
-          callbacks: {
-            label: ctx => ` R$ ${ctx.raw.toFixed(2)}`,
-            afterLabel: ctx => `Entregues: ${Math.round(ctx.raw / PRECO).toLocaleString()}`
-          }
-        }
-      },
-      scales: {
-        x: { ticks: { color: '#555', font: { size: 11 } }, grid: { color: '#1A1A1A' } },
-        y: {
-          ticks: { color: '#555', font: { size: 10 }, callback: v => 'R$ ' + v.toFixed(0) },
-          grid: { color: '#1E1E1E' }, min: 0
-        }
-      }
-    });
 
     const makeLine = (canvasId, labels, data, color, bgColor) => new Chart(document.getElementById(canvasId), {
       type: 'line',
@@ -783,162 +753,61 @@ function renderValores() {
           pointBackgroundColor: color, pointBorderColor: '#0A0A0A',
           pointRadius: 6, pointHoverRadius: 8, borderWidth: 2.5, tension: 0.35, fill: true }]
       },
-      options: baseLineOpts(color, bgColor)
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: '#1C1C1C', borderColor: '#2A2A2A', borderWidth: 1,
+            titleColor: '#F0F0F0', bodyColor: '#aaa',
+            callbacks: {
+              label: ctx => ` R$ ${ctx.raw.toFixed(2)}`,
+              afterLabel: ctx => `Entregues: ${Math.round(ctx.raw / PRECO).toLocaleString()}`
+            }
+          }
+        },
+        scales: {
+          x: { ticks: { color: '#555', font: { size: 11 } }, grid: { color: '#1A1A1A' } },
+          y: { ticks: { color: '#555', font: { size: 10 }, callback: v => 'R$ ' + v.toFixed(0) }, grid: { color: '#1E1E1E' }, min: 0 }
+        }
+      }
     });
 
     chartValDia   = makeLine('cvValDia',   labDias, valDia,   '#A78BFA', 'rgba(167,139,250,.08)');
     chartValManha = makeLine('cvValManha', labDias, valManha, '#4A9EFF', 'rgba(74,158,255,.08)');
     chartValTarde = makeLine('cvValTarde', labDias, valTarde, '#F5A623', 'rgba(245,166,35,.08)');
 
-    // Projeção até fim do mês com acumulado
-    const hoje = new Date();
-    const anoAtual  = hoje.getFullYear();
-    const mesAtual  = hoje.getMonth(); // 0-based
-    const ultimoDia = new Date(anoAtual, mesAtual + 1, 0).getDate();
-    const mm = String(mesAtual + 1).padStart(2, '0');
-
-    // Labels: todos os dias do mês corrente
-    const todosLabels = [];
-    for (let d = 1; d <= ultimoDia; d++) {
-      todosLabels.push(`${String(d).padStart(2,'0')}/${mm}`);
-    }
-
-    // Mapeia valores reais por label DD/MM
-    const realMap = {};
-    labDias.forEach((l, i) => { realMap[l] = valDia[i]; });
-
-    // Linha real: valores nos dias com campanha, null nos demais
-    const dataReal = todosLabels.map(l => realMap[l] !== undefined ? realMap[l] : null);
-
-    // Acumulado real (soma crescente dos dias com dados)
-    let acc = 0;
-    const dataAcumulado = todosLabels.map(l => {
-      if (realMap[l] !== undefined) { acc += realMap[l]; return parseFloat(acc.toFixed(2)); }
-      return null;
-    });
-
-    // Projeção a partir de hoje até fim do mês
-    const diaHoje = hoje.getDate();
-
-    // Encontra o último índice com dado real
-    let ultimoIdxReal = -1;
-    todosLabels.forEach((l, i) => { if (realMap[l] !== undefined) ultimoIdxReal = i; });
-
-    // Acumulado real até hoje
-    const ultimoAcc = acc;
-
-    // Dias restantes no mês a partir de hoje (excluindo dias já com campanha)
-    // Conta quantos dias de hoje em diante ainda não têm dado real
-    let diasRestantes = 0;
-    todosLabels.forEach((l, i) => {
-      const dia = parseInt(l.split('/')[0]);
-      if (dia > diaHoje && realMap[l] === undefined) diasRestantes++;
-    });
-
-    // Linha de projeção: a partir do ponto após o último dado real, cresce com projMedio
-    // Conecta no último ponto real para não haver gap
-    let projAcc = ultimoAcc;
-    const dataProjecao = todosLabels.map((l, i) => {
-      const dia = parseInt(l.split('/')[0]);
-      if (i <= ultimoIdxReal) {
-        // Nos dias com dado real, retorna o acumulado real (ponto de conexão no último)
-        return i === ultimoIdxReal ? ultimoAcc : null;
-      }
-      projAcc += projMedio;
-      return parseFloat(projAcc.toFixed(2));
-    });
-
-    // Bandas de melhor/pior: acumulado do zero ao longo de todos os dias do mês
-    let accMelhor = 0, accPior = 0;
-    const dataBandaMelhor = todosLabels.map(() => {
-      accMelhor += projMelhor; return parseFloat(accMelhor.toFixed(2));
-    });
-    const dataBandaPior = todosLabels.map(() => {
-      accPior += projPior; return parseFloat(accPior.toFixed(2));
-    });
-
-    // Totais projetados ao fim do mês
-    const totalProjFimMes = parseFloat((ultimoAcc + diasRestantes * projMedio).toFixed(2));
-    const totalProjMelhor = parseFloat((ultimoAcc + diasRestantes * projMelhor).toFixed(2));
-    const totalProjPior   = parseFloat((ultimoAcc + diasRestantes * projPior).toFixed(2));
-
-chartProjecao = new Chart(document.getElementById('cvProjecao'), {
+    // Projeção: 3 linhas — melhor, médio, pior
+    chartProjecao = new Chart(document.getElementById('cvProjecao'), {
       type: 'line',
       data: {
-        labels: todosLabels,
+        labels: labDias.length ? labDias : ['D1','D2','D3'],
         datasets: [
-          {
-            label: 'Melhor cenário',
-            data: dataBandaMelhor,
-            borderColor: 'rgba(0,201,122,.4)', borderDash: [5,4], borderWidth: 1.5,
-            pointRadius: 0, backgroundColor: 'rgba(0,201,122,.04)', fill: '+1', tension: 0
-          },
-          {
-            label: 'Pior cenário',
-            data: dataBandaPior,
-            borderColor: 'rgba(236,0,0,.4)', borderDash: [5,4], borderWidth: 1.5,
-            pointRadius: 0, backgroundColor: 'rgba(236,0,0,.04)', fill: false, tension: 0
-          },
-          {
-            label: 'Acumulado real',
-            data: dataAcumulado,
-            borderColor: '#F5A623', borderWidth: 2.5,
-            pointBackgroundColor: '#F5A623', pointBorderColor: '#0A0A0A',
-            pointRadius: dataAcumulado.map(v => v !== null ? 5 : 0),
-            pointHoverRadius: 8,
-            backgroundColor: 'rgba(245,166,35,.07)', fill: false, tension: 0.3,
-            spanGaps: false
-          },
-          {
-            label: 'Projeção',
-            data: dataProjecao,
-            borderColor: '#A78BFA', borderDash: [6,3], borderWidth: 2,
-            pointRadius: 0, pointHoverRadius: 6,
-            backgroundColor: 'rgba(167,139,250,.05)', fill: false, tension: 0.3,
-            spanGaps: false
-          }
+          { label: 'Melhor cenário', data: labDias.map(() => projMelhor), borderColor: '#00C97A', borderDash: [6,3], borderWidth: 2, pointRadius: 0, backgroundColor: 'rgba(0,201,122,.04)', fill: false, tension: 0 },
+          { label: 'Médio',          data: labDias.map(() => projMedio),  borderColor: '#A78BFA', borderDash: [4,3], borderWidth: 2, pointRadius: 0, backgroundColor: 'transparent',          fill: false, tension: 0 },
+          { label: 'Pior cenário',   data: labDias.map(() => projPior),   borderColor: '#EC0000', borderDash: [6,3], borderWidth: 2, pointRadius: 0, backgroundColor: 'rgba(236,0,0,.04)',   fill: false, tension: 0 },
+          { label: 'Real',           data: valDia, borderColor: '#F5A623', borderWidth: 2.5, pointBackgroundColor: '#F5A623', pointBorderColor: '#0A0A0A', pointRadius: 6, pointHoverRadius: 8, backgroundColor: 'rgba(245,166,35,.08)', fill: true, tension: 0.35 }
         ]
       },
       options: {
         responsive: true, maintainAspectRatio: false,
         plugins: {
-          legend: {
-            display: true,
-            labels: { color: '#888', font: { size: 11 }, boxWidth: 18, padding: 14 }
-          },
+          legend: { display: true, labels: { color: '#777', font: { size: 11 }, boxWidth: 18, padding: 12 } },
           tooltip: {
             backgroundColor: '#1C1C1C', borderColor: '#2A2A2A', borderWidth: 1,
             titleColor: '#F0F0F0', bodyColor: '#aaa',
-            callbacks: {
-              label: ctx => ctx.raw !== null ? ` ${ctx.dataset.label}: R$ ${Number(ctx.raw).toLocaleString('pt-BR',{minimumFractionDigits:2})}` : null,
-              filter: item => item.raw !== null
-            }
+            callbacks: { label: ctx => ` ${ctx.dataset.label}: R$ ${ctx.raw.toFixed(2)}` }
           }
         },
         scales: {
-          x: {
-            ticks: { color: '#555', font: { size: 10 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 12 },
-            grid: { color: '#1A1A1A' }
-          },
-          y: {
-            ticks: { color: '#555', font: { size: 10 }, callback: v => 'R$ ' + v.toLocaleString('pt-BR',{minimumFractionDigits:0}) },
-            grid: { color: '#1E1E1E' }, min: 0
-          }
+          x: { ticks: { color: '#555', font: { size: 11 } }, grid: { color: '#1A1A1A' } },
+          y: { ticks: { color: '#555', font: { size: 10 }, callback: v => 'R$ ' + v.toFixed(0) }, grid: { color: '#1E1E1E' }, min: 0 }
         }
       }
     });
-
-
-    // Atualiza card de projeção acumulada
-    const cardProj = document.getElementById('cardProjAcum');
-    if (cardProj) {
-      cardProj.innerHTML = `
-        <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px">Projeção até fim do mês</div>
-        <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:700;color:var(--purple)">R$ ${acumProj.toLocaleString('pt-BR',{minimumFractionDigits:2})}</div>
-        <div style="font-size:11px;color:var(--muted)">Real R$ ${acumReal.toFixed(2)} + ${diasRestantes}d × R$ ${projMedio.toFixed(2)}</div>`;
-    }
   }, 80);
 }
+
 
 function renderGeralError(msg) {
   document.getElementById('geralContent').innerHTML=`

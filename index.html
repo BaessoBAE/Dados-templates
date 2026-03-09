@@ -183,10 +183,12 @@ const DEFAULT_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQf3O5GB-oO
 
 // Lista de proxies para tentar em sequência
 const PROXIES = [
-  url => `https://api.allorigins.win/raw?url=${encodeURIComponent(url + '&t=' + Date.now())}`,
-  url => `https://corsproxy.io/?${encodeURIComponent(url + '&t=' + Date.now())}`,
-  url => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url + '&t=' + Date.now())}`,
-  url => url + '&t=' + Date.now()
+  url => `https://corsproxy.io/?${encodeURIComponent(url)}&_=${Date.now()}`,
+  url => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}&_=${Date.now()}`,
+  url => `https://thingproxy.freeboard.io/fetch/${url}&_=${Date.now()}`,
+  url => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
+  url => `https://corsproxy.io/?url=${encodeURIComponent(url)}`,
+  url => url
 ];
 
 let CSV_URL = localStorage.getItem('ak_csv_url') || DEFAULT_CSV;
@@ -237,7 +239,7 @@ async function loadData() {
   for (let i = 0; i < PROXIES.length; i++) {
     try {
       const proxyUrl = PROXIES[i](CSV_URL);
-      const res = await fetch(proxyUrl, { signal: AbortSignal.timeout(15000), cache: 'no-store' });
+      const res = await fetch(proxyUrl, { signal: AbortSignal.timeout(20000), cache: 'no-store' });
       if (!res.ok) throw new Error('HTTP ' + res.status);
       const text = await res.text();
       if (!text || text.length < 10) throw new Error('Resposta vazia');
@@ -255,9 +257,24 @@ async function loadData() {
     }
   }
 
-  // todos os proxies falharam
+  // todos os proxies falharam — tenta fetch direto sem proxy como último recurso
+  try {
+    const res = await fetch(CSV_URL + '&_=' + Date.now(), { cache: 'no-store', signal: AbortSignal.timeout(20000) });
+    if (res.ok) {
+      const text = await res.text();
+      if (text && text.length > 10) {
+        allData = parseCSV(text);
+        if (allData.length) {
+          setStatus('Atualizado ✓ — ' + allData.length.toLocaleString() + ' registros', true);
+          renderAll();
+          return;
+        }
+      }
+    }
+  } catch(e) { console.warn('Direto também falhou:', e.message); }
+
   setStatus('Erro ao carregar', false);
-  renderGeralError('Não foi possível acessar a planilha. Verifique se ela está publicada corretamente no Google Sheets (Arquivo → Compartilhar → Publicar na web).');
+  renderGeralError('Todos os proxies falharam. Faça Ctrl+Shift+R para limpar o cache e tente novamente. Se o erro persistir, vá em Configurar e re-cole a URL da planilha.');
 }
 
 function showLoading() {

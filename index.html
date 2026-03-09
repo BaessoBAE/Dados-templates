@@ -310,22 +310,74 @@ function bOk(v)  { return v>=90?'<span class="badge bg">✓ Ótimo</span>':v>=80
 // ── RENDERS ──────────────────────────────────────────────────────
 function renderAll() { renderGeral(); renderCampCards(); renderTemplates(); }
 
-function getTodayCampaign() {
-  // Pega a campanha mais recente (última adicionada)
-  const camps = getCampaigns();
-  return camps.length ? camps[camps.length - 1] : null;
+function getCampHorario(camp) {
+  // Detecta manhã ou tarde pelo nome da campanha
+  const name = (camp.name || '').toLowerCase();
+  if (name.includes('manh')) return 'manha';
+  if (name.includes('tarde')) return 'tarde';
+  return 'outro';
 }
 
-function getCampByDate() {
-  // Agrupa campanhas por data extraída do nome (ex: 0403, 0503)
+function getCampHorarioLabel(camp) {
+  return getCampHorario(camp) === 'manha' ? 'Manhã' : getCampHorario(camp) === 'tarde' ? 'Tarde' : '';
+}
+
+function getCampHorarioTime(camp) {
+  // Pega hora:minuto do primeiro registro da coluna "Data de Criação do Ticket"
+  const row = camp.rows.find(r => r['Data de Criação do Ticket'] && r['Data de Criação do Ticket'].includes(':'));
+  if (!row) return '';
+  const raw = row['Data de Criação do Ticket']; // ex: "06/03/2026, 09:42:51"
+  const match = raw.match(/(\d{2}:\d{2})/);
+  return match ? match[1] : '';
+}
+
+function getTodayCampaigns() {
+  // Pega a última campanha de manhã e a última de tarde
   const camps = getCampaigns();
-  return camps.map(c => {
-    const s = calcStats(c.rows);
-    // Extrai data do nome da campanha
+  const manhas = camps.filter(c => getCampHorario(c) === 'manha');
+  const tardes = camps.filter(c => getCampHorario(c) === 'tarde');
+  return {
+    manha: manhas.length ? manhas[manhas.length - 1] : null,
+    tarde: tardes.length ? tardes[tardes.length - 1] : null,
+  };
+}
+
+function getDailyData() {
+  // Agrupa campanhas por dia (manhã + tarde juntas) para o gráfico
+  const camps = getCampaigns();
+  const map = {};
+  camps.forEach(c => {
+    // Extrai data do nome: últimos 4 dígitos = DDMM
     const match = c.name.match(/(\d{4})$/);
-    const dateLabel = match ? match[1].replace(/(\d{2})(\d{2})/, '$1/$2') : c.name;
-    return { ...c, ...s, dateLabel };
+    const key = match ? match[1] : c.name;
+    const label = match ? match[1].replace(/(\d{2})(\d{2})/, '$1/$2') : c.name;
+    if (!map[key]) map[key] = { label, rows: [] };
+    map[key].rows.push(...c.rows);
   });
+  return Object.values(map).map(d => {
+    const s = calcStats(d.rows);
+    return { label: d.label, ...s };
+  });
+}
+
+function renderTodayCard(camp, tipo) {
+  if (!camp) return '';
+  const s = calcStats(camp.rows);
+  const time = getCampHorarioTime(camp);
+  const timeStr = time ? ` · ${time}` : '';
+  return `
+  <div class="today-section" style="border-color:${tipo==='manha'?'rgba(74,158,255,.3)':'rgba(245,166,35,.3)'}">
+    <div style="position:absolute;top:0;left:0;right:0;height:3px;background:${tipo==='manha'?'linear-gradient(90deg,var(--blue),var(--purple))':'linear-gradient(90deg,var(--amber),#FF4040)'}"></div>
+    <div class="today-header">${tipo==='manha'?'🌅':'🌆'} Campanha ${tipo==='manha'?'Manhã':'Tarde'}${timeStr} — <span style="color:${tipo==='manha'?'var(--blue)':'var(--amber)'}">${camp.name}</span></div>
+    <div class="today-grid">
+      <div class="today-card r"><div class="today-label">Total de Leads</div><div class="today-val">${s.total.toLocaleString()}</div><div class="today-note">${[...new Set(camp.rows.map(r=>r['Template']))].length} templates</div></div>
+      <div class="today-card g"><div class="today-label">Leads sem Erro</div><div class="today-val">${(s.total-s.erros).toLocaleString()}</div><div class="today-note">alcançados</div></div>
+      <div class="today-card a"><div class="today-label">Leads com Erro</div><div class="today-val">${s.erros.toLocaleString()}</div><div class="today-note">${s.perr.toFixed(1)}% da base</div></div>
+      <div class="today-card g"><div class="today-label">Taxa de Entrega</div><div class="today-val">${s.pok.toFixed(1)}%</div><div class="today-note">${s.entregues.toLocaleString()} entregues</div></div>
+      <div class="today-card p"><div class="today-label">Engajamento</div><div class="today-val">${s.peng.toFixed(1)}%</div><div class="today-note">${s.engajados.toLocaleString()} engajados</div></div>
+      <div class="today-card a"><div class="today-label">Taxa de Erro</div><div class="today-val">${s.perr.toFixed(1)}%</div><div class="today-note">${s.erros.toLocaleString()} falhas</div></div>
+    </div>
+  </div>`;
 }
 
 let chartEntrega = null;
@@ -335,25 +387,14 @@ function renderGeral() {
   const camps=getCampaigns(), s=calcStats(allData), el=document.getElementById('geralContent');
   if (!allData.length) { renderGeralError('Nenhum dado.'); return; }
   const rank=getTmplRank(), top3=rank.slice(0,3), bot=rank.filter(t=>t.pok<80).slice(0,3);
-  const today = getTodayCampaign();
-  const todayStats = today ? calcStats(today.rows) : null;
-  const campsByDate = getCampByDate();
+  const { manha, tarde } = getTodayCampaigns();
+  const daily = getDailyData();
 
   el.innerHTML=`
-    ${today && todayStats ? `
-    <div class="today-section">
-      <div class="today-header">📅 Campanha Mais Recente — <span style="color:var(--blue)">${today.name}</span></div>
-      <div class="today-grid">
-        <div class="today-card r"><div class="today-label">Total de Leads</div><div class="today-val">${todayStats.total.toLocaleString()}</div><div class="today-note">${[...new Set(today.rows.map(r=>r['Template']))].length} templates</div></div>
-        <div class="today-card g"><div class="today-label">Taxa de Entrega</div><div class="today-val">${todayStats.pok.toFixed(1)}%</div><div class="today-note">${todayStats.entregues.toLocaleString()} entregues</div></div>
-        <div class="today-card p"><div class="today-label">Engajamento</div><div class="today-val">${todayStats.peng.toFixed(1)}%</div><div class="today-note">${todayStats.engajados.toLocaleString()} engajados</div></div>
-        <div class="today-card a"><div class="today-label">Taxa de Erro</div><div class="today-val">${todayStats.perr.toFixed(1)}%</div><div class="today-note">${todayStats.erros.toLocaleString()} falhas</div></div>
-        <div class="today-card b"><div class="today-label">Engaj. / Entregues</div><div class="today-val">${todayStats.entregues?(todayStats.engajados/todayStats.entregues*100).toFixed(1):0}%</div><div class="today-note">dos que receberam</div></div>
-        <div class="today-card r" style="--red:var(--green)"><div class="today-label">Leads sem Erro</div><div class="today-val" style="color:var(--green)">${(todayStats.total - todayStats.erros).toLocaleString()}</div><div class="today-note">alcançados</div></div>
-      </div>
-    </div>` : ''}
+    ${renderTodayCard(manha, 'manha')}
+    ${renderTodayCard(tarde, 'tarde')}
 
-    <div class="sec-title">Visão Geral — Acumulado</div>
+    <div class="sec-title" style="margin-top:.5rem">Visão Geral — Acumulado</div>
     <div class="sec-sub">${camps.length} campanha(s) · ${s.total.toLocaleString()} leads no total</div>
     <div class="metrics">
       <div class="mc r"><div class="mc-label">Total de Leads</div><div class="mc-val">${s.total.toLocaleString()}</div><div class="mc-note">${camps.length} campanhas</div></div>
@@ -388,26 +429,32 @@ function renderGeral() {
 
     <div class="chart-grid">
       <div class="chart-card">
-        <div class="chart-title">📈 % Entrega por Campanha</div>
+        <div class="chart-title">📈 % Entrega por Dia <span style="font-size:11px;color:var(--muted);font-weight:400">(manhã + tarde agrupadas)</span></div>
         <div class="chart-wrap"><canvas id="chartEntrega"></canvas></div>
       </div>
       <div class="chart-card">
-        <div class="chart-title">❌ % Erro por Campanha</div>
+        <div class="chart-title">❌ % Erro por Dia <span style="font-size:11px;color:var(--muted);font-weight:400">(manhã + tarde agrupadas)</span></div>
         <div class="chart-wrap"><canvas id="chartErro"></canvas></div>
       </div>
     </div>`;
 
-  // Renderiza gráficos após o HTML estar no DOM
-  setTimeout(() => renderCharts(campsByDate), 50);
+  setTimeout(() => renderCharts(daily), 50);
 }
 
-function renderCharts(camps) {
-  const labels = camps.map(c => c.name.replace('whats ','').replace('geral ',''));
-  const deliveries = camps.map(c => parseFloat(c.pok.toFixed(1)));
-  const errors = camps.map(c => parseFloat(c.perr.toFixed(1)));
-  const totals = camps.map(c => c.total);
+function renderCharts(daily) {
+  const labels    = daily.map(d => d.label);
+  const deliveries= daily.map(d => parseFloat(d.pok.toFixed(1)));
+  const errors    = daily.map(d => parseFloat(d.perr.toFixed(1)));
+  const totals    = daily.map(d => d.total);
 
-  const baseOpts = {
+  if (chartEntrega) chartEntrega.destroy();
+  if (chartErro)    chartErro.destroy();
+
+  const c1 = document.getElementById('chartEntrega');
+  const c2 = document.getElementById('chartErro');
+  if (!c1 || !c2) return;
+
+  const baseOpts = (dataArr, label, colorFn, afterFn) => ({
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
@@ -417,79 +464,69 @@ function renderCharts(camps) {
         borderColor: '#2A2A2A',
         borderWidth: 1,
         titleColor: '#F0F0F0',
-        bodyColor: '#777',
+        bodyColor: '#aaa',
         callbacks: {
-          afterLabel: (ctx) => `Leads: ${totals[ctx.dataIndex].toLocaleString()}`
+          label: ctx => ` ${ctx.raw}% ${label}`,
+          afterLabel: ctx => afterFn(ctx)
         }
       }
     },
     scales: {
-      x: {
-        ticks: { color: '#555', font: { size: 10 }, maxRotation: 35 },
-        grid: { color: '#1C1C1C' }
-      },
+      x: { ticks: { color: '#555', font: { size: 11 } }, grid: { color: '#1A1A1A' } },
       y: {
         ticks: { color: '#555', font: { size: 10 }, callback: v => v + '%' },
-        grid: { color: '#222' },
+        grid: { color: '#1E1E1E' },
         min: 0, max: 100
-      }
-    }
-  };
-
-  // Destrói gráficos anteriores se existirem
-  if (chartEntrega) chartEntrega.destroy();
-  if (chartErro) chartErro.destroy();
-
-  const c1 = document.getElementById('chartEntrega');
-  const c2 = document.getElementById('chartErro');
-  if (!c1 || !c2) return;
-
-  chartEntrega = new Chart(c1, {
-    type: 'bar',
-    data: {
-      labels,
-      datasets: [{
-        data: deliveries,
-        backgroundColor: deliveries.map(v => v >= 90 ? 'rgba(0,201,122,.7)' : v >= 80 ? 'rgba(245,166,35,.7)' : 'rgba(236,0,0,.5)'),
-        borderColor:      deliveries.map(v => v >= 90 ? '#00C97A' : v >= 80 ? '#F5A623' : '#EC0000'),
-        borderWidth: 1,
-        borderRadius: 4,
-      }]
-    },
-    options: { ...baseOpts,
-      plugins: { ...baseOpts.plugins,
-        tooltip: { ...baseOpts.plugins.tooltip,
-          callbacks: {
-            label: ctx => ` ${ctx.raw}% de entrega`,
-            afterLabel: ctx => `Leads: ${totals[ctx.dataIndex].toLocaleString()}`
-          }
-        }
       }
     }
   });
 
+  chartEntrega = new Chart(c1, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        data: deliveries,
+        borderColor: '#00C97A',
+        backgroundColor: 'rgba(0,201,122,.08)',
+        pointBackgroundColor: deliveries.map(v => v>=85?'#00C97A':v>=75?'#F5A623':'#EC0000'),
+        pointBorderColor: '#0A0A0A',
+        pointRadius: 6,
+        pointHoverRadius: 8,
+        borderWidth: 2.5,
+        tension: 0.35,
+        fill: true,
+      }]
+    },
+    options: baseOpts(deliveries, 'de entrega', v=>v, ctx=>`Leads: ${totals[ctx.dataIndex].toLocaleString()}`)
+  });
+
   chartErro = new Chart(c2, {
-    type: 'bar',
+    type: 'line',
     data: {
       labels,
       datasets: [{
         data: errors,
-        backgroundColor: errors.map(v => v > 25 ? 'rgba(236,0,0,.7)' : v > 15 ? 'rgba(245,166,35,.6)' : 'rgba(74,158,255,.5)'),
-        borderColor:      errors.map(v => v > 25 ? '#EC0000' : v > 15 ? '#F5A623' : '#4A9EFF'),
-        borderWidth: 1,
-        borderRadius: 4,
+        borderColor: '#EC0000',
+        backgroundColor: 'rgba(236,0,0,.07)',
+        pointBackgroundColor: errors.map(v => v>25?'#EC0000':v>15?'#F5A623':'#4A9EFF'),
+        pointBorderColor: '#0A0A0A',
+        pointRadius: 6,
+        pointHoverRadius: 8,
+        borderWidth: 2.5,
+        tension: 0.35,
+        fill: true,
       }]
     },
-    options: { ...baseOpts,
-      scales: { ...baseOpts.scales,
-        y: { ...baseOpts.scales.y, max: Math.min(100, Math.max(...errors) + 10) }
-      },
-      plugins: { ...baseOpts.plugins,
-        tooltip: { ...baseOpts.plugins.tooltip,
-          callbacks: {
-            label: ctx => ` ${ctx.raw}% de erro`,
-            afterLabel: ctx => `Falhas: ${Math.round(totals[ctx.dataIndex] * ctx.raw / 100).toLocaleString()}`
-          }
+    options: {
+      ...baseOpts(errors, 'de erro', v=>v, ctx=>`Falhas: ${Math.round(totals[ctx.dataIndex]*errors[ctx.dataIndex]/100).toLocaleString()}`),
+      scales: {
+        x: { ticks: { color: '#555', font: { size: 11 } }, grid: { color: '#1A1A1A' } },
+        y: {
+          ticks: { color: '#555', font: { size: 10 }, callback: v => v + '%' },
+          grid: { color: '#1E1E1E' },
+          min: 0,
+          max: Math.min(100, Math.max(...errors) + 15)
         }
       }
     }

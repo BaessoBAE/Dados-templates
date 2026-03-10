@@ -374,13 +374,22 @@ function getDailyData() {
     const match = c.name.match(/(\d{4})$/);
     const key = match ? match[1] : c.name;
     const label = match ? match[1].replace(/(\d{2})(\d{2})/, '$1/$2') : c.name;
-    if (!map[key]) map[key] = { label, rows: [] };
+    if (!map[key]) map[key] = { key, label, rows: [] };
     map[key].rows.push(...c.rows);
   });
-  return Object.values(map).map(d => {
-    const s = calcStats(d.rows);
-    return { label: d.label, ...s };
-  });
+  // Ordena numericamente por DDMM (dia/mês) para evitar ordenação como string
+  return Object.values(map)
+    .sort((a, b) => {
+      const numA = parseInt(a.key, 10);
+      const numB = parseInt(b.key, 10);
+      // Converte DDMM → MMDD para ordenar cronologicamente
+      const toMMDD = n => (n % 100) * 100 + Math.floor(n / 100);
+      return toMMDD(numA) - toMMDD(numB);
+    })
+    .map(d => {
+      const s = calcStats(d.rows);
+      return { label: d.label, ...s };
+    });
 }
 
 function renderTodayCard(camp, tipo) {
@@ -661,12 +670,18 @@ function renderValores() {
     const key   = match ? match[1] : c.name;
     const label = match ? match[1].replace(/(\d{2})(\d{2})/, '$1/$2') : c.name;
     const tipo  = getCampHorario(c);
-    if (!diasMap[key]) diasMap[key] = { label, manha: [], tarde: [], all: [] };
+    if (!diasMap[key]) diasMap[key] = { key, label, manha: [], tarde: [], all: [] };
     diasMap[key].all.push(...c.rows);
     if (tipo === 'manha') diasMap[key].manha.push(...c.rows);
     if (tipo === 'tarde') diasMap[key].tarde.push(...c.rows);
   });
-  const dias = Object.values(diasMap);
+  const dias = Object.values(diasMap)
+    .sort((a, b) => {
+      const numA = parseInt(a.key, 10);
+      const numB = parseInt(b.key, 10);
+      const toMMDD = n => (n % 100) * 100 + Math.floor(n / 100);
+      return toMMDD(numA) - toMMDD(numB);
+    });
 
   // Calcula valor por dia (somente entregues * 0.43)
   const labDias  = dias.map(d => d.label);

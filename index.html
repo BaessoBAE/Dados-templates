@@ -842,7 +842,7 @@ function renderValores() {
 
   // Totais reais
   const totalLeads = allData.length;
-  const totalEntregues = allData.filter(r => pStatus(r) !== 'error').length;
+  const totalEntregues = allData.filter(r => pStatus(r['Status do Lead']) !== 'error').length;
   const totalErros = totalLeads - totalEntregues;
   const totalGasto = totalEntregues * CUSTO;
   const totalEconomia = totalErros * CUSTO;

@@ -352,7 +352,12 @@ function confLabel(rodadas) {
 }
 
 // ── RENDERS ──────────────────────────────────────────────────────
-function renderAll() { renderGeral(); renderCampCards(); renderTemplates(); renderValores(); }
+function renderAll() {
+  try { renderGeral(); } catch(e) { console.error('renderGeral:', e); }
+  try { renderCampCards(); } catch(e) { console.error('renderCampCards:', e); }
+  try { renderTemplates(); } catch(e) { console.error('renderTemplates:', e); }
+  try { renderValores(); } catch(e) { console.error('renderValores:', e); document.getElementById('valoresContent').innerHTML='<div class="loading"><div class="loading-text">Erro: '+e.message+'</div></div>'; }
+}
 
 function getCampHorario(camp) {
   // Detecta manhã ou tarde pelo nome da campanha
@@ -806,7 +811,7 @@ function renderTemplates() {
         <thead><tr><th>#</th><th>Template</th><th>Rodadas</th><th>Confiança</th><th>Total Leads</th><th>Entregues</th><th>Engajados</th><th>% Entrega</th><th>% Eng.</th><th>Status</th></tr></thead>
         <tbody>${rank.map((t,i)=>{
           const conf=confLabel(t.rodadas);
-          return`<tr style="cursor:pointer" onclick="openTmplModal(${JSON.stringify(t.name)})" title="Clique para ver histórico">
+          return`<tr style="cursor:pointer" data-tmpl="${t.name}" class="tmpl-row" title="Clique para ver histórico">
           <td style="color:var(--muted);font-size:11px">${String(i+1).padStart(2,'0')}</td>
           <td><strong style="color:var(--text)">${t.name}</strong></td>
           <td style="color:var(--muted)">${t.rodadas}x</td>
@@ -818,12 +823,18 @@ function renderTemplates() {
           <td>${bOk(t.pok,t.rodadas)}</td></tr>`;
         }).join('')}
         </tbody></table></div></div>`;
+
+  // Event delegation - safer than inline onclick
+  document.querySelectorAll('.tmpl-row').forEach(row => {
+    row.addEventListener('click', () => openTmplModal(row.dataset.tmpl));
+  });
 }
 
 
 function renderValores() {
   const el = document.getElementById('valoresContent');
-  if (!allData.length) { el.innerHTML='<div class="loading"><div class="loading-text">Sem dados.</div></div>'; return; }
+  if (!el) return;
+  if (!allData.length) { el.innerHTML='<div class="loading"><div class="loading-text">Sem dados carregados.</div></div>'; return; }
 
   const daily = getDailyData();
   const camps = getCampaigns();
@@ -837,7 +848,7 @@ function renderValores() {
   const totalEconomia = totalErros * CUSTO;
 
   // Médias reais de % entrega e % erro por campanha
-  const taxasEntrega = camps.map(c => calcStats(c.rows).pok);
+  const taxasEntrega = camps.map(camp => calcStats(camp.rows).pok);
   const mediaEntrega = taxasEntrega.reduce((a,b)=>a+b,0) / taxasEntrega.length;
   const mediaErro = 100 - mediaEntrega;
 
@@ -1100,9 +1111,10 @@ function updateSimulator() {
 function renderGeralError(msg) {
   document.getElementById('geralContent').innerHTML=`
     <div class="error-box"><h3>⚠️ Não foi possível carregar os dados</h3>
-    <p>Verifique se a planilha está publicada corretamente.<br>
-    Vá na aba <strong>⚙️ Configurar</strong> para atualizar a URL se necessário.<br><br>
-    <small style="opacity:.6">${msg||''}</small></p></div>`;
+    <p>Isso pode ser uma instabilidade temporária do servidor de conexão.<br>
+    Aguarde alguns segundos e clique em <strong>↻ Atualizar</strong>.<br><br>
+    Se o erro persistir, vá em <strong>⚙️ Configurar</strong> e re-cole a URL da planilha.<br>
+    <small style="opacity:.6">Todos os proxies falharam. Faça Ctrl+Shift+R para limpar o cache e tente novamente. ${msg?'Detalhe: '+msg:''}</small></p></div>`;
 }
 
 function show(id,tab) {

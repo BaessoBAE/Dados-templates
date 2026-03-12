@@ -167,15 +167,30 @@
   <div class="sec-title">⚙️ Configuração</div>
   <div class="sec-sub">URL do CSV da Google Sheets</div>
   <div class="config-card">
-    <h3>🔗 URL do CSV</h3>
+    <h3>💬 WhatsApp — URL do CSV (aba Dados)</h3>
     <input type="text" class="config-input" id="csvUrl" placeholder="https://docs.google.com/spreadsheets/d/e/XXXXX/pub?output=csv"/>
+    <div style="font-size:11px;color:var(--muted);margin:.4rem 0">Publique a aba <strong>Dados</strong> como CSV no Google Sheets e cole a URL aqui.</div>
     <button class="config-btn" onclick="saveConfig()">Salvar e Conectar</button>
     <div style="font-size:12px;margin-top:.5rem" id="configNote"></div>
+  </div>
+  <div class="config-card" style="border-top:2px solid var(--blue)">
+    <h3>📱 SMS — URL do CSV (aba SMS)</h3>
+    <input type="text" class="config-input" id="csvUrlSms" placeholder="https://docs.google.com/spreadsheets/d/e/XXXXX/pub?gid=XXXXX&single=true&output=csv"/>
+    <div style="font-size:11px;color:var(--muted);margin:.4rem 0">Publique a aba <strong>SMS</strong> separadamente e cole a URL aqui. Deixe em branco se ainda não tiver dados.</div>
+    <button class="config-btn" style="background:var(--blue)" onclick="saveConfigSms()">Salvar SMS</button>
+    <div style="font-size:12px;margin-top:.5rem" id="configNoteSms"></div>
+  </div>
+  <div class="config-card" style="border-top:2px solid var(--purple)">
+    <h3>🎙️ Voz — URL do CSV (aba Voz)</h3>
+    <input type="text" class="config-input" id="csvUrlVoz" placeholder="https://docs.google.com/spreadsheets/d/e/XXXXX/pub?gid=XXXXX&single=true&output=csv"/>
+    <div style="font-size:11px;color:var(--muted);margin:.4rem 0">Publique a aba <strong>Voz</strong> separadamente e cole a URL aqui. Deixe em branco se ainda não tiver dados.</div>
+    <button class="config-btn" style="background:var(--purple)" onclick="saveConfigVoz()">Salvar Voz</button>
+    <div style="font-size:12px;margin-top:.5rem" id="configNoteVoz"></div>
   </div>
   <div class="config-card">
     <h3>📋 Como adicionar novas campanhas</h3>
     <div class="step"><div class="step-num">1</div><div class="step-text">Exporte o relatório da nova campanha do sistema</div></div>
-    <div class="step"><div class="step-num">2</div><div class="step-text">Cole as linhas novas <strong>abaixo das anteriores</strong> na aba <span class="ic">Dados</span> — não apague nada</div></div>
+    <div class="step"><div class="step-num">2</div><div class="step-text">Cole as linhas novas <strong>abaixo das anteriores</strong> na aba correspondente: <span class="ic">Dados</span> (WhatsApp), <span class="ic">SMS</span> ou <span class="ic">Voz</span> — não apague nada</div></div>
     <div class="step"><div class="step-num">3</div><div class="step-text">Clique em <strong>↻ Atualizar</strong> no dashboard 🎉</div></div>
   </div>
 </div>
@@ -196,10 +211,26 @@ const PROXIES = [
 
 let CSV_URL = localStorage.getItem('ak_csv_url') || DEFAULT_CSV;
 let allData = [];
+let smsData = [];
+let vozData = [];
+let activeChannel = 'whatsapp'; // 'whatsapp' | 'sms' | 'voz'
 let selectedCamp = null;
 let currentFilter = 'todos';
 
+// URLs por canal — detectadas a partir da URL base da planilha
+function buildSheetUrl(baseUrl, gid) {
+  // Converte URL de publicação para incluir GID específico da aba
+  // Formato: ...pub?gid=XXXXXX&single=true&output=csv
+  const base = baseUrl.split('?')[0];
+  return base + '?gid=' + gid + '&single=true&output=csv';
+}
+let CSV_URL_SMS = localStorage.getItem('ak_csv_sms') || '';
+let CSV_URL_VOZ = localStorage.getItem('ak_csv_voz') || '';
+
 document.getElementById('csvUrl').value = CSV_URL;
+// Pre-fill SMS and VOZ URLs if saved
+if (CSV_URL_SMS && document.getElementById('csvUrlSms')) document.getElementById('csvUrlSms').value = CSV_URL_SMS;
+if (CSV_URL_VOZ && document.getElementById('csvUrlVoz')) document.getElementById('csvUrlVoz').value = CSV_URL_VOZ;
 
 function saveConfig() {
   const url = document.getElementById('csvUrl').value.trim();
@@ -210,6 +241,26 @@ function saveConfig() {
   loadData();
 }
 function note(msg,color){ const n=document.getElementById('configNote'); n.style.color=color||'var(--muted)'; n.textContent=msg; }
+
+function saveConfigSms() {
+  const url = document.getElementById('csvUrlSms').value.trim();
+  const n = document.getElementById('configNoteSms');
+  if (!url) { n.style.color='var(--amber)'; n.textContent='⚠️ Cole a URL da aba SMS.'; return; }
+  CSV_URL_SMS = url;
+  localStorage.setItem('ak_csv_sms', url);
+  n.style.color='var(--green)'; n.textContent='✓ URL SMS salva! Carregando...';
+  loadChannelData();
+}
+
+function saveConfigVoz() {
+  const url = document.getElementById('csvUrlVoz').value.trim();
+  const n = document.getElementById('configNoteVoz');
+  if (!url) { n.style.color='var(--amber)'; n.textContent='⚠️ Cole a URL da aba Voz.'; return; }
+  CSV_URL_VOZ = url;
+  localStorage.setItem('ak_csv_voz', url);
+  n.style.color='var(--green)'; n.textContent='✓ URL Voz salva! Carregando...';
+  loadChannelData();
+}
 
 // ── CSV PARSER ───────────────────────────────────────────────────
 function parseCSV(text) {
@@ -248,8 +299,11 @@ async function loadData() {
       if (!text || text.length < 10) throw new Error('Resposta vazia');
       allData = parseCSV(text);
       if (!allData.length) throw new Error('Nenhum dado válido encontrado.');
-      setStatus(`Atualizado ✓ — ${allData.length.toLocaleString()} registros`, true);
+      setStatus(`Carregando canais adicionais...`, true);
       renderAll();
+      // Load SMS and VOZ in parallel if configured
+      await loadChannelData();
+      setStatus(`Atualizado ✓ — ${allData.length.toLocaleString()} registros WhatsApp`, true);
       return;
     } catch(e) {
       console.warn(`Proxy ${i+1} falhou:`, e.message);
@@ -268,8 +322,10 @@ async function loadData() {
       if (text && text.length > 10) {
         allData = parseCSV(text);
         if (allData.length) {
-          setStatus('Atualizado ✓ — ' + allData.length.toLocaleString() + ' registros', true);
+          setStatus('Carregando canais...', true);
           renderAll();
+          await loadChannelData();
+          setStatus('Atualizado ✓ — ' + allData.length.toLocaleString() + ' registros WhatsApp', true);
           return;
         }
       }
@@ -278,6 +334,44 @@ async function loadData() {
 
   setStatus('Erro ao carregar', false);
   renderGeralError('Todos os proxies falharam. Faça Ctrl+Shift+R para limpar o cache e tente novamente. Se o erro persistir, vá em Configurar e re-cole a URL da planilha.');
+}
+
+async function fetchCSV(url) {
+  for (let i = 0; i < PROXIES.length; i++) {
+    try {
+      const proxyUrl = PROXIES[i](url);
+      const res = await fetch(proxyUrl, { signal: AbortSignal.timeout(15000), cache: 'no-store' });
+      if (!res.ok) continue;
+      const text = await res.text();
+      if (text && text.length > 10) return text;
+    } catch(e) { /* try next */ }
+  }
+  return null;
+}
+
+async function loadChannelData() {
+  // Load SMS
+  if (CSV_URL_SMS) {
+    try {
+      const text = await fetchCSV(CSV_URL_SMS);
+      if (text) {
+        smsData = parseCSV(text);
+        console.log('SMS loaded:', smsData.length, 'rows');
+      }
+    } catch(e) { console.warn('SMS load failed:', e); }
+  }
+  // Load VOZ
+  if (CSV_URL_VOZ) {
+    try {
+      const text = await fetchCSV(CSV_URL_VOZ);
+      if (text) {
+        vozData = parseCSV(text);
+        console.log('Voz loaded:', vozData.length, 'rows');
+      }
+    } catch(e) { console.warn('Voz load failed:', e); }
+  }
+  // Re-render geral to update channel cards
+  if (smsData.length || vozData.length) renderGeral();
 }
 
 function showLoading() {
@@ -315,9 +409,10 @@ function calcStats(rows) {
     peng: total?(engajados/total*100):0,
     perr: total?(erros/total*100):0 };
 }
-function getCampaigns() {
+function getCampaigns(data) {
+  const src = data || allData;
   const map={};
-  allData.forEach(r=>{ const n=r['Nome da Campanha']; if(!map[n]) map[n]={name:n,rows:[]}; map[n].rows.push(r); });
+  src.forEach(r=>{ const n=r['Nome da Campanha']; if(!map[n]) map[n]={name:n,rows:[]}; map[n].rows.push(r); });
   return Object.values(map).sort((a, b) => {
     // Ordena pelo DDMM extraído do nome da campanha
     const toNum = name => {
@@ -329,9 +424,10 @@ function getCampaigns() {
     return toNum(a.name) - toNum(b.name);
   });
 }
-function getTmplRank() {
+function getTmplRank(data) {
+  const src = data || allData;
   const map={};
-  allData.forEach(r=>{ const t=r['Template']; if(!map[t]) map[t]={name:t,rows:[]}; map[t].rows.push(r); });
+  src.forEach(r=>{ const t=r['Template']; if(!map[t]) map[t]={name:t,rows:[]}; map[t].rows.push(r); });
   return Object.values(map).map(t=>{
     const s=calcStats(t.rows);
     return {...t,...s,rodadas:[...new Set(t.rows.map(r=>r['Nome da Campanha']))].length};
@@ -380,9 +476,9 @@ function getCampHorarioTime(camp) {
   return match ? match[1] : '';
 }
 
-function getTodayCampaigns() {
+function getTodayCampaigns(data) {
   // Pega a última campanha de manhã e a última de tarde
-  const camps = getCampaigns();
+  const camps = getCampaigns(data);
   const manhas = camps.filter(c => getCampHorario(c) === 'manha');
   const tardes = camps.filter(c => getCampHorario(c) === 'tarde');
   return {
@@ -391,9 +487,9 @@ function getTodayCampaigns() {
   };
 }
 
-function getDailyData() {
+function getDailyData(data) {
   // Agrupa campanhas por dia (manhã + tarde juntas) para o gráfico
-  const camps = getCampaigns();
+  const camps = getCampaigns(data);
   const map = {};
   camps.forEach(c => {
     // Extrai data do nome: últimos 4 dígitos = DDMM
@@ -443,14 +539,91 @@ let chartValManha = null;
 let chartValTarde = null;
 let chartProjecao = null;
 
+function getActiveData() {
+  if (activeChannel === 'sms') return smsData;
+  if (activeChannel === 'voz') return vozData;
+  return allData;
+}
+
+function renderChannelCards() {
+  const wStats = allData.length ? calcStats(allData) : null;
+  const sStats = smsData.length ? calcStats(smsData) : null;
+  const vStats = vozData.length ? calcStats(vozData) : null;
+
+  const card = (id, icon, label, color, stats, active) => `
+    <div onclick="switchChannel('${id}')" style="
+      flex:1; min-width:180px; cursor:pointer;
+      background:var(--surface); border:2px solid ${active ? color : 'var(--border)'};
+      border-radius:12px; padding:1.1rem 1.2rem;
+      transition: border-color .2s, transform .15s;
+      transform: ${active ? 'translateY(-2px)' : 'none'};
+      position:relative; overflow:hidden;">
+      <div style="position:absolute;top:0;left:0;right:0;height:3px;background:${active ? color : 'transparent'}"></div>
+      <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.6rem">
+        <span style="font-size:20px">${icon}</span>
+        <span style="font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:${active?'var(--text)':'var(--muted)'}">${label}</span>
+        ${active ? `<span style="margin-left:auto;font-size:9px;background:${color}22;color:${color};padding:2px 7px;border-radius:20px;font-weight:700">ATIVO</span>` : ''}
+      </div>
+      ${stats ? `
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:.4rem">
+          <div>
+            <div style="font-size:9px;color:var(--muted);text-transform:uppercase">Entrega</div>
+            <div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:700;color:${color}">${stats.pok.toFixed(1)}%</div>
+          </div>
+          <div>
+            <div style="font-size:9px;color:var(--muted);text-transform:uppercase">Leads</div>
+            <div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:700;color:var(--text)">${stats.total.toLocaleString('pt-BR')}</div>
+          </div>
+        </div>
+        <div style="font-size:10px;color:var(--muted);margin-top:.4rem">${stats.engajados} engajados · ${stats.erros} erros</div>
+      ` : `
+        <div style="font-size:12px;color:var(--muted);margin-top:.3rem">Aguardando dados</div>
+        <div style="font-size:10px;color:var(--border);margin-top:.2rem">Configure a URL na aba ⚙️</div>
+      `}
+    </div>`;
+
+  return `<div style="display:flex;gap:.8rem;flex-wrap:wrap;margin-bottom:1.5rem">
+    ${card('whatsapp','💬','WhatsApp','var(--green)', wStats, activeChannel==='whatsapp')}
+    ${card('sms','📱','SMS','var(--blue)', sStats, activeChannel==='sms')}
+    ${card('voz','🎙️','Voz','var(--purple)', vStats, activeChannel==='voz')}
+  </div>`;
+}
+
+function switchChannel(ch) {
+  activeChannel = ch;
+  renderGeral();
+}
+
 function renderGeral() {
-  const camps=getCampaigns(), s=calcStats(allData), el=document.getElementById('geralContent');
-  if (!allData.length) { renderGeralError('Nenhum dado.'); return; }
-  const rank=getTmplRank(), top3=rank.slice(0,3), bot=rank.filter(t=>t.pok<80).slice(0,3);
-  const { manha, tarde } = getTodayCampaigns();
-  const daily = getDailyData();
+  const data = getActiveData();
+  const el = document.getElementById('geralContent');
+
+  // Always show channel cards first
+  if (!data.length) {
+    const isEmpty = activeChannel !== 'whatsapp';
+    el.innerHTML = renderChannelCards() + (isEmpty
+      ? `<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:2rem;text-align:center;margin-top:.5rem">
+          <div style="font-size:32px;margin-bottom:.8rem">${activeChannel==='sms'?'📱':'🎙️'}</div>
+          <div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:700;margin-bottom:.5rem">Dados de ${activeChannel.toUpperCase()} ainda não configurados</div>
+          <div style="font-size:13px;color:var(--muted);margin-bottom:1rem">Quando tiver os dados, vá em <strong>⚙️ Configurar</strong> e cole a URL da aba ${activeChannel.toUpperCase()} da planilha.</div>
+        </div>`
+      : `<div style="padding:2rem;text-align:center;color:var(--muted)">Sem dados WhatsApp.</div>`);
+    return;
+  }
+
+  // Save original allData reference and swap for active channel
+  const _orig = allData;
+  if (activeChannel !== 'whatsapp') allData = data;
+
+  const camps=getCampaigns(data), s=calcStats(data), rank=getTmplRank(data);
+  const top3=rank.slice(0,3), bot=rank.filter(t=>t.pok<75).slice(0,3);
+  const { manha, tarde } = getTodayCampaigns(data);
+  const daily = getDailyData(data);
+
+  allData = _orig;
 
   el.innerHTML=`
+    ${renderChannelCards()}
     ${renderTodayCard(manha, 'manha')}
     ${renderTodayCard(tarde, 'tarde')}
 

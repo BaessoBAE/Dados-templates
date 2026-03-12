@@ -898,10 +898,16 @@ function renderValores() {
             style="background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:'DM Sans',sans-serif;font-size:22px;font-weight:700;padding:.5rem .8rem;border-radius:8px;width:160px;outline:none"/>
         </div>
         <div style="display:flex;flex-direction:column;gap:.3rem">
-          <label style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">% Entrega Simulada</label>
-          <input type="number" id="simTaxa" value="${mediaEntrega.toFixed(1)}" min="1" max="100" step="0.1"
+          <label style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">% Entrega Mínima</label>
+          <input type="number" id="simTaxaMin" value="${Math.max(60, (mediaEntrega - 8).toFixed(1))}" min="1" max="100" step="0.1"
             oninput="updateSimulator()"
-            style="background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:'DM Sans',sans-serif;font-size:22px;font-weight:700;padding:.5rem .8rem;border-radius:8px;width:130px;outline:none"/>
+            style="background:var(--surface2);border:1px solid var(--border);color:#FF4040;font-family:'DM Sans',sans-serif;font-size:22px;font-weight:700;padding:.5rem .8rem;border-radius:8px;width:120px;outline:none"/>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:.3rem">
+          <label style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">% Entrega Máxima</label>
+          <input type="number" id="simTaxaMax" value="${Math.min(100, (mediaEntrega + 8).toFixed(1))}" min="1" max="100" step="0.1"
+            oninput="updateSimulator()"
+            style="background:var(--surface2);border:1px solid var(--border);color:var(--green);font-family:'DM Sans',sans-serif;font-size:22px;font-weight:700;padding:.5rem .8rem;border-radius:8px;width:120px;outline:none"/>
         </div>
         <div style="display:flex;flex-direction:column;gap:.3rem">
           <label style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Campanhas no Mês</label>
@@ -1015,33 +1021,50 @@ function renderChartValDia(daily) {
 
 function updateSimulator() {
   const leads = parseInt(document.getElementById('simLeads')?.value) || 500;
-  const taxa = parseFloat(document.getElementById('simTaxa')?.value) || 80;
+  const taxaMin = parseFloat(document.getElementById('simTaxaMin')?.value) || 70;
+  const taxaMax = parseFloat(document.getElementById('simTaxaMax')?.value) || 90;
   const numCamps = parseInt(document.getElementById('simCamps')?.value) || 22;
   const CUSTO = 0.43;
 
-  const entregues = Math.round(leads * taxa / 100);
-  const erros = leads - entregues;
-  const custoCamp = entregues * CUSTO;
-  const custoMes = custoCamp * numCamps;
-  const economiaMes = erros * CUSTO * numCamps;
+  // Valida min <= max
+  const tMin = Math.min(taxaMin, taxaMax);
+  const tMax = Math.max(taxaMin, taxaMax);
+  const taxaMedia = (tMin + tMax) / 2;
+
+  // Gera variação aleatória por campanha dentro do intervalo
+  const labels = Array.from({length: numCamps}, (_,i) => `Camp ${i+1}`);
+  const taxasPorCamp = labels.map(() => tMin + Math.random() * (tMax - tMin));
+  const entreguesPorCamp = taxasPorCamp.map(t => Math.round(leads * t / 100));
+  const errosPorCamp = entreguesPorCamp.map(e => leads - e);
+  const custoPorCamp = entreguesPorCamp.map(e => e * CUSTO);
+
+  // Totais/médias para os cards
+  const totalEntreguesMes = entreguesPorCamp.reduce((a,b) => a+b, 0);
+  const totalErrosMes = errosPorCamp.reduce((a,b) => a+b, 0);
+  const custoMes = custoPorCamp.reduce((a,b) => a+b, 0);
+  const economiaMes = totalErrosMes * CUSTO;
+  const mediaEntregaReal = taxasPorCamp.reduce((a,b) => a+b, 0) / numCamps;
+
+  // Custo acumulado
+  const dataCusto = custoPorCamp.map((_, i) => parseFloat(custoPorCamp.slice(0, i+1).reduce((a,b) => a+b, 0).toFixed(2)));
 
   // Atualiza cards
   const cards = document.getElementById('simCards');
   if (cards) cards.innerHTML = `
     <div style="background:var(--surface2);border-radius:8px;padding:.9rem;border-top:2px solid var(--green)">
-      <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Entregues</div>
-      <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:700;color:var(--green)">${entregues.toLocaleString('pt-BR')}</div>
-      <div style="font-size:11px;color:var(--muted);margin-top:2px">${taxa.toFixed(1)}% de ${leads.toLocaleString('pt-BR')}</div>
+      <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Média Entrega Simulada</div>
+      <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:700;color:var(--green)">${mediaEntregaReal.toFixed(1)}%</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:2px">variação ${tMin.toFixed(0)}%–${tMax.toFixed(0)}%</div>
     </div>
     <div style="background:var(--surface2);border-radius:8px;padding:.9rem;border-top:2px solid #FF4040">
-      <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Erros (grátis)</div>
-      <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:700;color:#FF4040">${erros.toLocaleString('pt-BR')}</div>
-      <div style="font-size:11px;color:var(--muted);margin-top:2px">${(100-taxa).toFixed(1)}% da base</div>
+      <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Total Erros no Mês</div>
+      <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:700;color:#FF4040">${totalErrosMes.toLocaleString('pt-BR')}</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:2px">economia R$ ${economiaMes.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
     </div>
     <div style="background:var(--surface2);border-radius:8px;padding:.9rem;border-top:2px solid var(--blue)">
-      <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Custo por Campanha</div>
-      <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:700;color:var(--blue)">R$ ${custoCamp.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
-      <div style="font-size:11px;color:var(--muted);margin-top:2px">${entregues.toLocaleString('pt-BR')} × R$0,43</div>
+      <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Total Entregues no Mês</div>
+      <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:700;color:var(--blue)">${totalEntreguesMes.toLocaleString('pt-BR')}</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:2px">${numCamps} campanhas × ~${Math.round(totalEntreguesMes/numCamps).toLocaleString('pt-BR')}</div>
     </div>
     <div style="background:var(--surface2);border-radius:8px;padding:.9rem;border-top:2px solid var(--purple)">
       <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Projeção Mensal (${numCamps} camps.)</div>
@@ -1049,11 +1072,8 @@ function updateSimulator() {
       <div style="font-size:11px;color:var(--muted);margin-top:2px">economia R$ ${economiaMes.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
     </div>`;
 
-  // Gráfico simulador: barras por campanha (1 a numCamps)
-  const labels = Array.from({length: numCamps}, (_,i) => `Camp ${i+1}`);
-  const dataEntrega = labels.map(() => entregues);
-  const dataErro = labels.map(() => erros);
-  const dataCusto = labels.map((_,i) => parseFloat((custoCamp * (i+1)).toFixed(2)));
+  const dataEntrega = entreguesPorCamp;
+  const dataErro = errosPorCamp;
 
   const ctx = document.getElementById('chartSimulador');
   if (!ctx) return;

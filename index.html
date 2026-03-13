@@ -500,9 +500,18 @@ function renderAll() {
   try { renderValores(); } catch(e) { console.error('renderValores:', e); document.getElementById('valoresContent').innerHTML='<div class="loading"><div class="loading-text">Erro: '+e.message+'</div></div>'; }
 }
 
+function normalizeCampName(str) {
+  // Normaliza encoding corrompido (manhÃ£ → manha) e remove acentos
+  return (str || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')  // remove diacríticos
+    .replace(/[^\x00-\x7F]/g, 'a');  // substitui qualquer char não-ASCII por 'a'
+}
+
 function getCampHorario(camp) {
-  // Detecta manhã ou tarde pelo nome da campanha
-  const name = (camp.name || '').toLowerCase();
+  // Detecta manhã ou tarde — normaliza encoding corrompido antes de comparar
+  const name = normalizeCampName(camp.name || '');
   if (name.includes('manh')) return 'manha';
   if (name.includes('tarde')) return 'tarde';
   return 'outro';
@@ -522,13 +531,24 @@ function getCampHorarioTime(camp) {
 }
 
 function getTodayCampaigns(data) {
-  // Pega a última campanha de manhã e a última de tarde
+  // Pega as campanhas mais recentes de manhã e tarde
+  // Pode haver mais de uma tarde/manhã no mesmo dia
   const camps = getCampaigns(data);
-  const manhas = camps.filter(c => getCampHorario(c) === 'manha');
-  const tardes = camps.filter(c => getCampHorario(c) === 'tarde');
+  // Pega o último DDMM com campanhas
+  const lastKey = (() => {
+    const keys = camps.map(c => { const m = c.name.match(/(\d{4})$/); return m ? m[1] : null; }).filter(Boolean);
+    if (!keys.length) return null;
+    return keys.reduce((best, k) => {
+      const toN = s => parseInt(s.slice(2,4))*100 + parseInt(s.slice(0,2));
+      return toN(k) > toN(best) ? k : best;
+    });
+  })();
+  const lastCamps = lastKey ? camps.filter(c => c.name.endsWith(lastKey)) : camps.slice(-2);
+  const manhas = lastCamps.filter(c => getCampHorario(c) === 'manha');
+  const tardes = lastCamps.filter(c => getCampHorario(c) === 'tarde');
   return {
     manha: manhas.length ? manhas[manhas.length - 1] : null,
-    tarde: tardes.length ? tardes[tardes.length - 1] : null,
+    tarde: tardes,  // array — pode ter mais de uma
   };
 }
 
@@ -557,7 +577,7 @@ function getDailyData(data) {
     });
 }
 
-function renderTodayCard(camp, tipo) {
+function renderTodayCard(camp, tipo, idx=0) {
   if (!camp) return '';
   const s = calcStats(camp.rows);
   const time = getCampHorarioTime(camp);
@@ -565,7 +585,7 @@ function renderTodayCard(camp, tipo) {
   return `
   <div class="today-section" style="border-color:${tipo==='manha'?'rgba(74,158,255,.3)':'rgba(245,166,35,.3)'}">
     <div style="position:absolute;top:0;left:0;right:0;height:3px;background:${tipo==='manha'?'linear-gradient(90deg,var(--blue),var(--purple))':'linear-gradient(90deg,var(--amber),#FF4040)'}"></div>
-    <div class="today-header">${tipo==='manha'?'🌅':'🌆'} Campanha ${tipo==='manha'?'Manhã':'Tarde'}${timeStr} — <span style="color:${tipo==='manha'?'var(--blue)':'var(--amber)'}">${camp.name}</span></div>
+    <div class="today-header">${tipo==='manha'?'🌅':'🌆'} Campanha ${tipo==='manha'?'Manhã':(idx>0?`Tarde ${idx}`:'Tarde')}${timeStr} — <span style="color:${tipo==='manha'?'var(--blue)':'var(--amber)'}">${camp.name}</span></div>
     <div class="today-grid">
       <div class="today-card r"><div class="today-label">Total de Leads</div><div class="today-val">${s.total.toLocaleString()}</div><div class="today-note">${[...new Set(camp.rows.map(r=>r['Template']))].length} templates</div></div>
       <div class="today-card g"><div class="today-label">Leads sem Erro</div><div class="today-val">${(s.total-s.erros).toLocaleString()}</div><div class="today-note">alcançados</div></div>
@@ -670,7 +690,7 @@ function renderGeral() {
   el.innerHTML=`
     ${renderChannelCards()}
     ${renderTodayCard(manha, 'manha')}
-    ${renderTodayCard(tarde, 'tarde')}
+    ${Array.isArray(tarde) ? tarde.map((t,i) => renderTodayCard(t, 'tarde', tarde.length > 1 ? i+1 : 0)).join('') : renderTodayCard(tarde, 'tarde')}
 
     <div class="sec-title" style="margin-top:.5rem">${activeChannel==='sms'?'📱 SMS':activeChannel==='voz'?'🎙️ Voz':'💬 WhatsApp'} — Acumulado</div>
     <div class="sec-sub">${camps.length} campanha(s) · ${s.total.toLocaleString()} leads no total</div>

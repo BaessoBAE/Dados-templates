@@ -267,31 +267,38 @@ function saveConfigVoz() {
 
 // ── CSV PARSER ───────────────────────────────────────────────────
 function parseCSV(text) {
-  const lines = text.split('\n').filter(l => l.trim());
-  if (lines.length < 2) return [];
-  function parseLine(line) {
-    const result = []; let cur = '', inQ = false;
-    for (let i = 0; i < line.length; i++) {
-      const c = line[i];
-      if (c === '"') { inQ = !inQ; continue; }
-      if (c === ',' && !inQ) { result.push(cur.trim()); cur = ''; continue; }
-      cur += c;
-    }
-    result.push(cur.trim());
-    return result;
-  }
-  // Normaliza encoding corrompido no campo Nome da Campanha (manhÃ£ -> manha)
+  // Parser robusto: respeita \n dentro de campos entre aspas
   const fixEnc = s => (s||'')
-    .replace(/ManhÃ£/g, 'Manhã')
-    .replace(/manhÃ£/g, 'manhã')
-    .replace(/ManhÃ£/g, 'Manhã')
-    .replace(/manhÃ£/g, 'manhã')
-    .replace(/ManhÃ/g,  'Manhã')
-    .replace(/manhÃ/g,  'manhã')
+    .replace(/ManhÃ£/g, 'Manhã').replace(/manhÃ£/g, 'manhã')
+    .replace(/ManhÃ/g,  'Manhã').replace(/manhÃ/g,  'manhã');
 
-  const headers = parseLine(lines[0]);
-  return lines.slice(1).map(line => {
-    const vals = parseLine(line), obj = {};
+  function parseRows(raw) {
+    const rows = [];
+    let cur = '', inQ = false, row = [];
+    for (let i = 0; i < raw.length; i++) {
+      const c = raw[i];
+      if (c === '"') {
+        if (inQ && raw[i+1] === '"') { cur += '"'; i++; }
+        else inQ = !inQ;
+      } else if (c === ',' && !inQ) {
+        row.push(cur.trim()); cur = '';
+      } else if ((c === '\n' || c === '\r') && !inQ) {
+        if (c === '\r' && raw[i+1] === '\n') i++;
+        if (cur || row.length) { row.push(cur.trim()); rows.push(row); }
+        row = []; cur = '';
+      } else {
+        cur += c;
+      }
+    }
+    if (cur || row.length) { row.push(cur.trim()); rows.push(row); }
+    return rows;
+  }
+
+  const rows = parseRows(text);
+  if (rows.length < 2) return [];
+  const headers = rows[0];
+  return rows.slice(1).map(vals => {
+    const obj = {};
     headers.forEach((h,i) => { obj[h] = fixEnc((vals[i]||'').trim()); });
     return obj;
   }).filter(r => r['Nome da Campanha'] && r['ID do Ticket']);

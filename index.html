@@ -1074,10 +1074,14 @@ function renderValores() {
   const mediaErro = 100 - mediaEntrega;
 
   el.innerHTML = `
-    <div class="sec-title">💰 Análise Financeira</div>
-    <div class="sec-sub">Valor por mensagem: R$ 0,43 · Cobrado somente nas entregues · Base: ${totalLeads.toLocaleString('pt-BR')} leads enviados</div>
+    <!-- ══ WHATSAPP ══ -->
+    <div style="display:flex;align-items:center;gap:.6rem;margin-bottom:.5rem">
+      <span style="font-size:18px">💬</span>
+      <div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:700">WhatsApp — Análise Financeira</div>
+    </div>
+    <div class="sec-sub" style="margin-bottom:1rem">Valor por mensagem: R$ 0,43 · Cobrado somente nas entregues · Base: ${totalLeads.toLocaleString('pt-BR')} leads enviados</div>
 
-    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:.8rem;margin-bottom:1.5rem">
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:.8rem;margin-bottom:1.2rem">
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1rem;border-top:2px solid var(--green)">
         <div style="font-size:9px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:.4rem">Total Investido</div>
         <div style="font-family:'Syne',sans-serif;font-size:24px;font-weight:700;color:var(--green)">R$ ${totalGasto.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
@@ -1100,65 +1104,116 @@ function renderValores() {
       </div>
     </div>
 
-    <!-- GRÁFICO REAL POR DIA -->
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1.2rem;margin-bottom:1.2rem">
-      <div style="font-family:'Syne',sans-serif;font-size:13px;font-weight:700;margin-bottom:1rem;color:var(--text)">📈 Entrega e Erro por Dia — Real</div>
+      <div style="font-family:'Syne',sans-serif;font-size:13px;font-weight:700;margin-bottom:1rem;color:var(--text)">📈 Entrega e Erro por Dia — Real (WhatsApp)</div>
       <div style="position:relative;height:200px"><canvas id="chartValReal"></canvas></div>
     </div>
 
-    <!-- SIMULADOR -->
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.4rem;margin-bottom:1.2rem;border-top:3px solid var(--purple)">
-      <div style="font-family:'Syne',sans-serif;font-size:14px;font-weight:700;margin-bottom:.3rem">🧮 Simulador de Campanha</div>
-      <div style="font-size:12px;color:var(--muted);margin-bottom:1.2rem">Insira a quantidade de leads para simular entrega, erro e custo com base nas taxas médias reais</div>
-
+      <div style="font-family:'Syne',sans-serif;font-size:14px;font-weight:700;margin-bottom:.3rem">🧮 Simulador de Campanha — WhatsApp</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:1.2rem">Simule entrega, erro e custo com base nas taxas médias reais</div>
       <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;margin-bottom:1.2rem">
         <div style="display:flex;flex-direction:column;gap:.3rem">
           <label style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Leads na Campanha</label>
-          <input type="number" id="simLeads" value="500" min="1" max="100000"
-            oninput="updateSimulator()"
+          <input type="number" id="simLeads" value="500" min="1" max="100000" oninput="updateSimulator()"
             style="background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:'DM Sans',sans-serif;font-size:22px;font-weight:700;padding:.5rem .8rem;border-radius:8px;width:160px;outline:none"/>
         </div>
         <div style="display:flex;flex-direction:column;gap:.3rem">
           <label style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">% Entrega Mínima</label>
-          <input type="number" id="simTaxaMin" value="${Math.max(60, (mediaEntrega - 8).toFixed(1))}" min="1" max="100" step="0.1"
-            oninput="updateSimulator()"
+          <input type="number" id="simTaxaMin" value="${Math.max(60,(mediaEntrega-8).toFixed(1))}" min="1" max="100" step="0.1" oninput="updateSimulator()"
             style="background:var(--surface2);border:1px solid var(--border);color:#FF4040;font-family:'DM Sans',sans-serif;font-size:22px;font-weight:700;padding:.5rem .8rem;border-radius:8px;width:120px;outline:none"/>
         </div>
         <div style="display:flex;flex-direction:column;gap:.3rem">
           <label style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">% Entrega Máxima</label>
-          <input type="number" id="simTaxaMax" value="${Math.min(100, (mediaEntrega + 8).toFixed(1))}" min="1" max="100" step="0.1"
-            oninput="updateSimulator()"
+          <input type="number" id="simTaxaMax" value="${Math.min(100,(mediaEntrega+8).toFixed(1))}" min="1" max="100" step="0.1" oninput="updateSimulator()"
             style="background:var(--surface2);border:1px solid var(--border);color:var(--green);font-family:'DM Sans',sans-serif;font-size:22px;font-weight:700;padding:.5rem .8rem;border-radius:8px;width:120px;outline:none"/>
         </div>
         <div style="display:flex;flex-direction:column;gap:.3rem">
           <label style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Campanhas no Mês</label>
-          <input type="number" id="simCamps" value="22" min="1" max="60"
-            oninput="updateSimulator()"
+          <input type="number" id="simCamps" value="22" min="1" max="60" oninput="updateSimulator()"
             style="background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:'DM Sans',sans-serif;font-size:22px;font-weight:700;padding:.5rem .8rem;border-radius:8px;width:120px;outline:none"/>
         </div>
         <div style="margin-top:1.2rem">
           <button onclick="updateSimulator()" style="background:var(--purple);color:white;border:none;padding:.6rem 1.2rem;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer">▶ Simular</button>
         </div>
       </div>
-
-      <!-- Cards resultado simulação -->
       <div id="simCards" style="display:grid;grid-template-columns:repeat(4,1fr);gap:.7rem;margin-bottom:1.2rem"></div>
-
-      <!-- Gráfico simulação -->
       <div style="position:relative;height:220px"><canvas id="chartSimulador"></canvas></div>
     </div>
 
-    <!-- GRÁFICO VALOR DIA REAL -->
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1.2rem">
-      <div style="font-family:'Syne',sans-serif;font-size:13px;font-weight:700;margin-bottom:1rem;color:var(--text)">💸 Valor Dia — Total investido por dia</div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1.2rem;margin-bottom:2rem">
+      <div style="font-family:'Syne',sans-serif;font-size:13px;font-weight:700;margin-bottom:1rem;color:var(--text)">💸 Valor Dia — Total investido por dia (WhatsApp)</div>
       <div style="position:relative;height:180px"><canvas id="chartValDia2"></canvas></div>
-    </div>`;
+    </div>
 
-  // Renderiza gráficos após DOM estar pronto
+    <!-- ══ DIVISOR ══ -->
+    <div style="border-top:2px solid var(--border);margin:1.5rem 0 1.8rem;position:relative">
+      <div style="position:absolute;top:-12px;left:50%;transform:translateX(-50%);background:var(--bg);padding:0 1rem;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em">SMS</div>
+    </div>
+
+    <!-- ══ SMS ══ -->
+    ${smsData.length ? `
+    <div style="display:flex;align-items:center;gap:.6rem;margin-bottom:.5rem">
+      <span style="font-size:18px">📱</span>
+      <div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:700">SMS — Análise Financeira</div>
+    </div>
+    <div class="sec-sub" style="margin-bottom:1rem">Valor por mensagem: R$ 0,07 · 100% entregues · Base: ${smsData.length.toLocaleString('pt-BR')} leads enviados</div>
+
+    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:.8rem;margin-bottom:1.2rem">
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1rem;border-top:2px solid var(--green)">
+        <div style="font-size:9px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:.4rem">Total Investido SMS</div>
+        <div style="font-family:'Syne',sans-serif;font-size:24px;font-weight:700;color:var(--green)">R$ ${(smsData.length * 0.07).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:.3rem">${smsData.length.toLocaleString('pt-BR')} mensagens enviadas</div>
+      </div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1rem;border-top:2px solid var(--blue)">
+        <div style="font-size:9px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:.4rem">Custo / Mensagem</div>
+        <div style="font-family:'Syne',sans-serif;font-size:24px;font-weight:700;color:var(--blue)">R$ 0,07</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:.3rem">todas as mensagens são cobradas</div>
+      </div>
+    </div>
+
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.4rem;margin-bottom:1.2rem;border-top:3px solid var(--blue)">
+      <div style="font-family:'Syne',sans-serif;font-size:14px;font-weight:700;margin-bottom:.3rem">🧮 Simulador de Campanha — SMS</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:1.2rem">Simule o custo de campanhas SMS (100% entregues, R$ 0,07/msg)</div>
+      <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;margin-bottom:1.2rem">
+        <div style="display:flex;flex-direction:column;gap:.3rem">
+          <label style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Leads na Campanha</label>
+          <input type="number" id="simSmsLeads" value="500" min="1" max="100000" oninput="updateSimulatorSms()"
+            style="background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:'DM Sans',sans-serif;font-size:22px;font-weight:700;padding:.5rem .8rem;border-radius:8px;width:160px;outline:none"/>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:.3rem">
+          <label style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Campanhas no Mês</label>
+          <input type="number" id="simSmsCamps" value="${getCampaigns(smsData).length||5}" min="1" max="60" oninput="updateSimulatorSms()"
+            style="background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:'DM Sans',sans-serif;font-size:22px;font-weight:700;padding:.5rem .8rem;border-radius:8px;width:120px;outline:none"/>
+        </div>
+        <div style="margin-top:1.2rem">
+          <button onclick="updateSimulatorSms()" style="background:var(--blue);color:white;border:none;padding:.6rem 1.2rem;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer">▶ Simular</button>
+        </div>
+      </div>
+      <div id="simSmsCards" style="display:grid;grid-template-columns:repeat(3,1fr);gap:.7rem;margin-bottom:1.2rem"></div>
+      <div style="position:relative;height:200px"><canvas id="chartSimuladorSms"></canvas></div>
+    </div>
+
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1.2rem;margin-bottom:1.5rem">
+      <div style="font-family:'Syne',sans-serif;font-size:13px;font-weight:700;margin-bottom:1rem;color:var(--text)">💸 Valor Dia — Total investido por dia (SMS)</div>
+      <div style="position:relative;height:180px"><canvas id="chartValDiaSms"></canvas></div>
+    </div>
+    ` : `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:2rem;text-align:center;margin-bottom:1.5rem">
+      <div style="font-size:28px;margin-bottom:.8rem">📱</div>
+      <div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;margin-bottom:.5rem">Dados SMS não configurados</div>
+      <div style="font-size:13px;color:var(--muted)">Configure a URL da aba SMS em <strong>⚙️ Configurar</strong> para ver a análise financeira do SMS.</div>
+    </div>
+    `}`;
+
   setTimeout(() => {
     renderChartValReal(daily);
     updateSimulator();
     renderChartValDia(daily);
+    if (smsData.length) {
+      updateSimulatorSms();
+      renderChartValDiaSms();
+    }
   }, 80);
 }
 
@@ -1348,6 +1403,95 @@ function updateSimulator() {
     }
   });
 }
+
+function updateSimulatorSms() {
+  const leads   = parseInt(document.getElementById('simSmsLeads')?.value) || 500;
+  const nCamps  = parseInt(document.getElementById('simSmsCamps')?.value) || 5;
+  const CUSTO   = 0.07;
+  // SMS = 100% entregue, sem erro
+  const totalEntregues = leads * nCamps;
+  const totalCusto = totalEntregues * CUSTO;
+  const mediaCusto = leads * CUSTO;
+
+  // Cards
+  const cardsEl = document.getElementById('simSmsCards');
+  if (cardsEl) cardsEl.innerHTML = `
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:.8rem">
+      <div style="font-size:9px;text-transform:uppercase;color:var(--muted);margin-bottom:.3rem">Total Enviados no Mês</div>
+      <div style="font-family:'Syne',sans-serif;font-size:22px;font-weight:700;color:var(--green)">${totalEntregues.toLocaleString('pt-BR')}</div>
+      <div style="font-size:10px;color:var(--muted)">${nCamps} campanhas × ${leads}</div>
+    </div>
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:.8rem">
+      <div style="font-size:9px;text-transform:uppercase;color:var(--muted);margin-bottom:.3rem">Custo por Campanha</div>
+      <div style="font-family:'Syne',sans-serif;font-size:22px;font-weight:700;color:var(--blue)">R$ ${mediaCusto.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
+      <div style="font-size:10px;color:var(--muted)">${leads} leads × R$ 0,07</div>
+    </div>
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:.8rem">
+      <div style="font-size:9px;text-transform:uppercase;color:var(--muted);margin-bottom:.3rem">Projeção Mensal</div>
+      <div style="font-family:'Syne',sans-serif;font-size:22px;font-weight:700;color:var(--purple)">R$ ${totalCusto.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
+      <div style="font-size:10px;color:var(--muted)">${nCamps} campanhas no mês</div>
+    </div>`;
+
+  // Gráfico barras SMS (todas verdes - sem erro)
+  const ctx = document.getElementById('chartSimuladorSms');
+  if (!ctx) return;
+  if (window._chartSimSms) window._chartSimSms.destroy();
+  const labels = Array.from({length:nCamps},(_,i)=>`Camp ${i+1}`);
+  const entregues = labels.map(()=>leads);
+  const custoAcum = labels.map((_,i)=>(i+1)*leads*CUSTO);
+
+  window._chartSimSms = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        { label:'Enviados', data:entregues, backgroundColor:'rgba(0,201,122,.7)', borderRadius:3, yAxisID:'y' },
+        { label:'Custo Acumulado (R$)', data:custoAcum, type:'line', borderColor:'var(--blue)',
+          backgroundColor:'rgba(79,140,255,.1)', pointBackgroundColor:'var(--blue)',
+          pointRadius:3, borderWidth:2, tension:.35, fill:false, yAxisID:'y2' }
+      ]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ labels:{ color:'#777', font:{size:11}, boxWidth:14 } }, tooltip:{ backgroundColor:'#1C1C1C', borderColor:'#2A2A2A', borderWidth:1, titleColor:'#F0F0F0', bodyColor:'#AAA' } },
+      scales:{
+        x:{ ticks:{color:'#555',font:{size:10}}, grid:{color:'rgba(255,255,255,.04)'} },
+        y:{ position:'left', ticks:{color:'#555',font:{size:10}}, grid:{color:'rgba(255,255,255,.04)'}, title:{display:true,text:'Leads',color:'#555',font:{size:10}} },
+        y2:{ position:'right', ticks:{color:'var(--blue)',font:{size:10},callback:v=>'R$'+v.toLocaleString('pt-BR')}, grid:{display:false}, title:{display:true,text:'Custo Acum.',color:'var(--blue)',font:{size:10}} }
+      }
+    }
+  });
+}
+
+function renderChartValDiaSms() {
+  const ctx = document.getElementById('chartValDiaSms');
+  if (!ctx || !smsData.length) return;
+  if (window._chartValDiaSms) window._chartValDiaSms.destroy();
+  const daily = getDailyData(smsData);
+  const CUSTO = 0.07;
+  window._chartValDiaSms = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: daily.map(d=>d.label),
+      datasets: [{
+        label: 'Valor Dia (R$)',
+        data: daily.map(d => parseFloat((d.total * CUSTO).toFixed(2))),
+        borderColor: 'var(--blue)', backgroundColor: 'rgba(79,140,255,.08)',
+        pointBackgroundColor:'var(--blue)', pointBorderColor:'#0A0A0A',
+        pointRadius:5, borderWidth:2.5, tension:.35, fill:true
+      }]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ labels:{color:'#777',font:{size:11},boxWidth:14} }, tooltip:{backgroundColor:'#1C1C1C',borderColor:'#2A2A2A',borderWidth:1,titleColor:'#F0F0F0',bodyColor:'#AAA',callbacks:{label:ctx=>'R$ '+ctx.parsed.y.toLocaleString('pt-BR',{minimumFractionDigits:2})}} },
+      scales:{
+        x:{ ticks:{color:'#555',font:{size:10}}, grid:{color:'rgba(255,255,255,.04)'} },
+        y:{ ticks:{color:'#555',font:{size:10},callback:v=>'R$'+v.toLocaleString('pt-BR')}, grid:{color:'rgba(255,255,255,.05)'} }
+      }
+    }
+  });
+}
+
 
 function renderGeralError(msg) {
   document.getElementById('geralContent').innerHTML=`

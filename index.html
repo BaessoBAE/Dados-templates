@@ -309,6 +309,10 @@ async function loadData() {
       allData = parseCSV(text);
       if (!allData.length) throw new Error('Nenhum dado válido encontrado.');
       setStatus(`Carregando canais adicionais...`, true);
+      // DEBUG: log all campaign names to find encoding issues
+      const campNames = [...new Set(allData.map(r=>r['Nome da Campanha']))].sort();
+      console.log('=== CAMPANHAS CARREGADAS ===', campNames.length);
+      campNames.forEach(n => console.log('  CAMP:', JSON.stringify(n)));
       renderAll();
       // Load SMS and VOZ in parallel if configured
       await loadChannelData();

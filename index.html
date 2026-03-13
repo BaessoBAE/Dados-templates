@@ -920,7 +920,7 @@ function getTmplHistory(name) {
     const rows = c.rows.filter(r => r['Template'] === name);
     if (!rows.length) return null;
     const s = calcStats(rows);
-    const match = c.name.match(/(\d{4})$/);
+    const match = c.name.match(/(\d{4})\s*$/);
     const label = match ? match[1].replace(/(\d{2})(\d{2})/, '$1/$2') : c.name;
     const tipo = getCampHorario(c) === 'manha' ? '🌅' : getCampHorario(c) === 'tarde' ? '🌆' : '';
     return { label: `${tipo} ${label}`, campanha: c.name, pok: s.pok, peng: s.peng, perr: s.perr, total: s.total, entregues: s.entregues, engajados: s.engajados };

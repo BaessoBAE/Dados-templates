@@ -336,8 +336,10 @@ async function loadData() {
   renderGeralError('Todos os proxies falharam. Faça Ctrl+Shift+R para limpar o cache e tente novamente. Se o erro persistir, vá em Configurar e re-cole a URL da planilha.');
 }
 
-async function fetchCSV(url) {
-  for (let i = 0; i < PROXIES.length; i++) {
+async function fetchCSV(url, skipAppsScript=false) {
+  // skipAppsScript=true for SMS/VOZ — Apps Script only serves the main WhatsApp sheet
+  const startIdx = skipAppsScript ? 1 : 0;
+  for (let i = startIdx; i < PROXIES.length; i++) {
     try {
       const proxyUrl = PROXIES[i](url);
       const res = await fetch(proxyUrl, { signal: AbortSignal.timeout(15000), cache: 'no-store' });
@@ -353,7 +355,7 @@ async function loadChannelData() {
   // Load SMS
   if (CSV_URL_SMS) {
     try {
-      const text = await fetchCSV(CSV_URL_SMS);
+      const text = await fetchCSV(CSV_URL_SMS, true);
       if (text) {
         smsData = parseCSV(text);
         console.log('SMS loaded:', smsData.length, 'rows');
@@ -363,7 +365,7 @@ async function loadChannelData() {
   // Load VOZ
   if (CSV_URL_VOZ) {
     try {
-      const text = await fetchCSV(CSV_URL_VOZ);
+      const text = await fetchCSV(CSV_URL_VOZ, true);
       if (text) {
         vozData = parseCSV(text);
         console.log('Voz loaded:', vozData.length, 'rows');

@@ -282,9 +282,12 @@ function parseCSV(text) {
   }
   // Normaliza encoding corrompido no campo Nome da Campanha (manhÃ£ -> manha)
   const fixEnc = s => (s||'')
-    .replace(/manh\u00c3\u00a3/gi, 'manh\u00e3')   // UTF-8 double-encoded
-    .replace(/manhÃ£/gi, 'manh\u00e3')               // literal Ã£
-    .replace(/manhÃ/gi,  'manh\u00e3');              // partial corruption
+    .replace(/ManhÃ£/g, 'Manhã')
+    .replace(/manhÃ£/g, 'manhã')
+    .replace(/ManhÃ£/g, 'Manhã')
+    .replace(/manhÃ£/g, 'manhã')
+    .replace(/ManhÃ/g,  'Manhã')
+    .replace(/manhÃ/g,  'manhã')
 
   const headers = parseLine(lines[0]);
   return lines.slice(1).map(line => {

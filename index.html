@@ -340,9 +340,31 @@ async function loadData() {
 }
 
 async function fetchCSV(url, skipAppsScript=false) {
-  // skipAppsScript=true for SMS/VOZ — Apps Script only serves the main WhatsApp sheet
-  const startIdx = skipAppsScript ? 1 : 0;
-  for (let i = startIdx; i < PROXIES.length; i++) {
+  // For SMS/VOZ: skip Apps Script (only serves WhatsApp) and corsproxy (unreliable)
+  // Try allorigins first, then direct
+  if (skipAppsScript) {
+    const secondary = [
+      u => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}&_=${Date.now()}`,
+      u => `https://corsproxy.io/?${encodeURIComponent(u)}&_=${Date.now()}`,
+      u => u
+    ];
+    for (const proxy of secondary) {
+      try {
+        const proxyUrl = proxy(url);
+        console.log('Trying proxy:', proxyUrl.substring(0,60));
+        const res = await fetch(proxyUrl, { signal: AbortSignal.timeout(15000), cache: 'no-store' });
+        if (!res.ok) { console.log('HTTP error:', res.status); continue; }
+        const text = await res.text();
+        console.log('Got text, first 80 chars:', text.substring(0,80));
+        // Validate it's CSV: must start with a text char, not HTML '<'
+        if (text && text.length > 10 && !text.trimStart().startsWith('<')) return text;
+        console.log('Response looks like HTML, skipping');
+      } catch(e) { console.log('Proxy failed:', e.message); }
+    }
+    return null;
+  }
+  // WhatsApp: use normal proxy chain
+  for (let i = 0; i < PROXIES.length; i++) {
     try {
       const proxyUrl = PROXIES[i](url);
       const res = await fetch(proxyUrl, { signal: AbortSignal.timeout(15000), cache: 'no-store' });

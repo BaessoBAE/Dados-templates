@@ -301,7 +301,7 @@ function parseCSV(text) {
     const obj = {};
     headers.forEach((h,i) => { obj[h] = fixEnc((vals[i]||'').trim()); });
     return obj;
-  }).filter(r => r['Nome da Campanha'] && (r['ID do Ticket'] || r['Status do Lead']));
+  }).filter(r => r['Nome da Campanha'] && r['ID do Ticket']);
 }
 
 // ── LOAD com fallback de proxies ─────────────────────────────────
@@ -353,7 +353,7 @@ async function loadData() {
     if (semCamp.length > 0) console.log('Exemplo sem campanha:', JSON.stringify(semCamp[0]));
     if (semTicket.length > 0) console.log('Exemplo sem ticket:', JSON.stringify(semTicket[0]));
 
-    allData = mapped.filter(r => r['Nome da Campanha'] && (r['ID do Ticket'] || r['Status do Lead']));
+    allData = mapped.filter(r => r['Nome da Campanha'] && r['ID do Ticket']);
 
     console.log(`📊 Total final: ${allData.length} registros`);
     const campNames = [...new Set(allData.map(r=>r['Nome da Campanha']))].sort();

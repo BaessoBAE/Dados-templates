@@ -309,58 +309,84 @@ async function loadData() {
   setStatus('Carregando...', false);
   showLoading();
 
-  for (let i = 0; i < PROXIES.length; i++) {
+  try {
+    let allRows = [];
+    let page = 0;
+
+    while (true) {
+      const url = `${APPS_SCRIPT_URL}?page=${page}&_=${Date.now()}`;
+      console.log(`📄 Página ${page}...`);
+      setStatus(`Carregando página ${page + 1}...`, false);
+
+      const res = await fetch(url, { signal: AbortSignal.timeout(30000), cache: 'no-store' });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const json = await res.json();
+
+      if (json.error) throw new Error(json.error);
+      if (!json.rows || !json.rows.length) { console.log('Página vazia, parando.'); break; }
+
+      allRows = allRows.concat(json.rows);
+      console.log(`✅ Página ${page}: +${json.rows.length} rows | total: ${allRows.length} | hasMore: ${json.hasMore}`);
+
+      if (!json.hasMore) break;
+      page++;
+      if (page > 30) { console.warn('Limite de páginas atingido'); break; }
+    }
+
+    if (!allRows.length) throw new Error('Nenhum dado encontrado.');
+
+    // Aplica fixEnc e filtra
+    const fixEnc = s => (s||'')
+      .replace(/ManhÃ£/g, 'Manhã').replace(/manhÃ£/g, 'manhã')
+      .replace(/ManhÃ/g,  'Manhã').replace(/manhÃ/g,  'manhã');
+
+    allData = allRows
+      .map(r => {
+        const obj = {};
+        Object.keys(r).forEach(k => { obj[k] = fixEnc(r[k]); });
+        return obj;
+      })
+      .filter(r => r['Nome da Campanha'] && r['ID do Ticket']);
+
+    console.log(`📊 Total final: ${allData.length} registros`);
+    const campNames = [...new Set(allData.map(r=>r['Nome da Campanha']))].sort();
+    console.log('=== CAMPANHAS ===', campNames.length);
+    campNames.forEach(n => console.log('  CAMP:', JSON.stringify(n)));
+
+    renderAll();
+    await loadChannelData();
+    setStatus(`Atualizado ✓ — ${allData.length.toLocaleString()} registros WhatsApp`, true);
+    return;
+
+  } catch(e) {
+    console.warn('Apps Script (JSON) falhou:', e.message);
+    setStatus('Tentando fallback CSV...', false);
+  }
+
+  // Fallback: CSV direto via proxies
+  const fallbackProxies = [
+    url => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}&_=${Date.now()}`,
+    url => `https://corsproxy.io/?${encodeURIComponent(url)}&_=${Date.now()}`,
+    url => url
+  ];
+  for (let i = 0; i < fallbackProxies.length; i++) {
     try {
-      const proxyUrl = PROXIES[i](CSV_URL);
-      console.log('🔵 Proxy ' + (i+1) + ' URL:', proxyUrl.substring(0, 120));
+      const proxyUrl = fallbackProxies[i](CSV_URL);
       const res = await fetch(proxyUrl, { signal: AbortSignal.timeout(20000), cache: 'no-store' });
-      console.log('🔵 Proxy ' + (i+1) + ' status:', res.status);
       if (!res.ok) throw new Error('HTTP ' + res.status);
       const text = await res.text();
-      console.log('🔵 Proxy ' + (i+1) + ' chars:', text?.length, '| inicio:', text?.substring(0,80));
-      if (!text || text.length < 10) throw new Error('Resposta vazia');
+      if (!text || text.length < 10 || text.trimStart().startsWith('<')) throw new Error('Inválido');
       allData = parseCSV(text);
-      console.log('✅ Proxy ' + (i+1) + ' rows:', allData.length);
-      if (!allData.length) throw new Error('Nenhum dado válido encontrado.');
-      setStatus(`Carregando canais adicionais...`, true);
-      // DEBUG: log all campaign names to find encoding issues
-      const campNames = [...new Set(allData.map(r=>r['Nome da Campanha']))].sort();
-      console.log('=== CAMPANHAS CARREGADAS ===', campNames.length);
-      campNames.forEach(n => console.log('  CAMP:', JSON.stringify(n)));
+      if (!allData.length) throw new Error('Sem dados');
       renderAll();
-      // Load SMS and VOZ in parallel if configured
       await loadChannelData();
       setStatus(`Atualizado ✓ — ${allData.length.toLocaleString()} registros WhatsApp`, true);
       return;
-    } catch(e) {
-      console.warn(`Proxy ${i+1} falhou:`, e.message);
-      if (i < PROXIES.length - 1) {
-        setStatus(`Tentando alternativa ${i+2}/${PROXIES.length}...`, false);
-        await new Promise(r => setTimeout(r, 500));
-      }
-    }
+    } catch(e) { console.warn(`Fallback ${i+1} falhou:`, e.message); }
   }
 
-  // todos os proxies falharam — tenta fetch direto sem proxy como último recurso
-  try {
-    const res = await fetch(CSV_URL + '&_=' + Date.now(), { cache: 'no-store', signal: AbortSignal.timeout(20000) });
-    if (res.ok) {
-      const text = await res.text();
-      if (text && text.length > 10) {
-        allData = parseCSV(text);
-        if (allData.length) {
-          setStatus('Carregando canais...', true);
-          renderAll();
-          await loadChannelData();
-          setStatus('Atualizado ✓ — ' + allData.length.toLocaleString() + ' registros WhatsApp', true);
-          return;
-        }
-      }
-    }
-  } catch(e) { console.warn('Direto também falhou:', e.message); }
-
   setStatus('Erro ao carregar', false);
-  renderGeralError('Todos os proxies falharam. Faça Ctrl+Shift+R para limpar o cache e tente novamente. Se o erro persistir, vá em Configurar e re-cole a URL da planilha.');
+  renderGeralError('Todos os proxies falharam. Faça Ctrl+Shift+R e tente novamente.');
 }
 
 async function fetchCSV(url, skipAppsScript=false) {

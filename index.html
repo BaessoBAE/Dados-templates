@@ -1060,13 +1060,23 @@ function renderValores() {
   const daily = getDailyData();
   const camps = getCampaigns();
   const CUSTO = 0.43;
+  const CUSTO_SMS = 0.07;
 
-  // Totais reais
+  // Totais reais WhatsApp
   const totalLeads = allData.length;
   const totalEntregues = allData.filter(r => pStatus(r['Status do Lead']) !== 'error').length;
   const totalErros = totalLeads - totalEntregues;
   const totalGasto = totalEntregues * CUSTO;
   const totalEconomia = totalErros * CUSTO;
+
+  // Totais reais Voz (placeholder — custo a definir)
+  const CUSTO_VOZ = 0.15; // placeholder
+  const vozEntregues = vozData.length ? calcStats(vozData).entregues : 0;
+  const vozGasto = vozEntregues * CUSTO_VOZ;
+
+  // Total mês consolidado
+  const smsGasto = smsData.length * CUSTO_SMS;
+  const totalMes = totalGasto + smsGasto + vozGasto;
 
   // Médias reais de % entrega e % erro por campanha
   const taxasEntrega = camps.map(camp => calcStats(camp.rows).pok);
@@ -1074,6 +1084,44 @@ function renderValores() {
   const mediaErro = 100 - mediaEntrega;
 
   el.innerHTML = `
+    <!-- ══ PAINEL CONSOLIDADO ══ -->
+    <div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:700;margin-bottom:.3rem">📊 Resumo Consolidado — Mês</div>
+    <div class="sec-sub" style="margin-bottom:1rem">Investimento real acumulado por canal</div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:.8rem;margin-bottom:.8rem">
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1rem;border-top:2px solid var(--green)">
+        <div style="font-size:9px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:.4rem">💬 Total WhatsApp</div>
+        <div style="font-family:'Syne',sans-serif;font-size:22px;font-weight:700;color:var(--green)">R$ ${totalGasto.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:.3rem">${totalEntregues.toLocaleString('pt-BR')} msgs · R$ 0,43</div>
+      </div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1rem;border-top:2px solid var(--blue)">
+        <div style="font-size:9px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:.4rem">📱 Total SMS</div>
+        ${smsData.length
+          ? `<div style="font-family:'Syne',sans-serif;font-size:22px;font-weight:700;color:var(--blue)">R$ ${(smsData.length*0.07).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
+             <div style="font-size:11px;color:var(--muted);margin-top:.3rem">${smsData.length.toLocaleString('pt-BR')} msgs · R$ 0,07</div>`
+          : `<div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:600;color:var(--muted)">—</div>
+             <div style="font-size:11px;color:var(--border);margin-top:.3rem">sem dados</div>`}
+      </div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1rem;border-top:2px solid var(--purple)">
+        <div style="font-size:9px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:.4rem">🎙️ Total Voz</div>
+        ${vozData.length
+          ? `<div style="font-family:'Syne',sans-serif;font-size:22px;font-weight:700;color:var(--purple)">R$ ${vozGasto.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
+             <div style="font-size:11px;color:var(--muted);margin-top:.3rem">${vozEntregues.toLocaleString('pt-BR')} ligações</div>`
+          : `<div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:600;color:var(--muted)">—</div>
+             <div style="font-size:11px;color:var(--border);margin-top:.3rem">sem dados</div>`}
+      </div>
+      <div style="background:var(--surface);border:2px solid var(--amber);border-radius:10px;padding:1rem">
+        <div style="font-size:9px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:.4rem">💰 Total Investido Mês</div>
+        <div style="font-family:'Syne',sans-serif;font-size:22px;font-weight:700;color:var(--amber)">R$ ${totalMes.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:.3rem">WPP + SMS${vozData.length?' + Voz':''}</div>
+      </div>
+    </div>
+
+    <!-- Cards simulados (preenchidos por updateSimulatorConsolidado) -->
+    <div id="simConsolidadoCards" style="display:grid;grid-template-columns:repeat(4,1fr);gap:.8rem;margin-bottom:2rem"></div>
+
+    <!-- ══ DIVISOR ══ -->
+    <div style="border-top:1px solid var(--border);margin:0 0 1.8rem"></div>
+
     <!-- ══ WHATSAPP ══ -->
     <div style="display:flex;align-items:center;gap:.6rem;margin-bottom:.5rem">
       <span style="font-size:18px">💬</span>
@@ -1214,6 +1262,7 @@ function renderValores() {
       updateSimulatorSms();
       renderChartValDiaSms();
     }
+    updateSimulatorConsolidado();
   }, 80);
 }
 
@@ -1404,7 +1453,55 @@ function updateSimulator() {
   });
 }
 
-function updateSimulatorSms() {
+function updateSimulatorConsolidado() {
+  const el = document.getElementById('simConsolidadoCards');
+  if (!el) return;
+
+  // Read simulated values from the individual simulators
+  const wppLeads   = parseInt(document.getElementById('simLeads')?.value) || 0;
+  const wppCamps   = parseInt(document.getElementById('simCamps')?.value) || 0;
+  const wppMin     = parseFloat(document.getElementById('simTaxaMin')?.value) || 0;
+  const wppMax     = parseFloat(document.getElementById('simTaxaMax')?.value) || 0;
+  const wppMedia   = (wppMin + wppMax) / 2 / 100;
+  const wppTotal   = wppLeads * wppCamps;
+  const wppEntregues = Math.round(wppTotal * wppMedia);
+  const simWpp     = wppEntregues * 0.43;
+
+  const smsLeads   = parseInt(document.getElementById('simSmsLeads')?.value) || 0;
+  const smsCamps   = parseInt(document.getElementById('simSmsCamps')?.value) || 0;
+  const simSms     = smsLeads * smsCamps * 0.07;
+
+  // Voz: se tiver simulador no futuro, usar — por ora usa vozData real
+  const simVoz     = vozData.length ? vozEntreguesGlobal * 0.15 : 0;
+
+  const simTotal   = simWpp + simSms + simVoz;
+
+  el.innerHTML = `
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:.9rem;border-top:2px solid var(--green)">
+      <div style="font-size:9px;text-transform:uppercase;color:var(--muted);margin-bottom:.4rem">💬 Simulado WhatsApp</div>
+      <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:700;color:var(--green)">R$ ${simWpp.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:.2rem">${wppEntregues.toLocaleString('pt-BR')} entregues × R$ 0,43</div>
+    </div>
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:.9rem;border-top:2px solid var(--blue)">
+      <div style="font-size:9px;text-transform:uppercase;color:var(--muted);margin-bottom:.4rem">📱 Simulado SMS</div>
+      <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:700;color:var(--blue)">R$ ${simSms.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:.2rem">${(smsLeads*smsCamps).toLocaleString('pt-BR')} msgs × R$ 0,07</div>
+    </div>
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:.9rem;border-top:2px solid var(--purple)">
+      <div style="font-size:9px;text-transform:uppercase;color:var(--muted);margin-bottom:.4rem">🎙️ Simulado Voz</div>
+      ${vozData.length
+        ? `<div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:700;color:var(--purple)">R$ ${simVoz.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
+           <div style="font-size:10px;color:var(--muted);margin-top:.2rem">dados reais</div>`
+        : `<div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:600;color:var(--muted)">—</div>
+           <div style="font-size:10px;color:var(--border);margin-top:.2rem">sem dados ainda</div>`}
+    </div>
+    <div style="background:var(--surface2);border:2px solid var(--amber);border-radius:8px;padding:.9rem">
+      <div style="font-size:9px;text-transform:uppercase;color:var(--muted);margin-bottom:.4rem">💰 Total Simulado Mês</div>
+      <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:700;color:var(--amber)">R$ ${simTotal.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:.2rem">soma dos 3 canais</div>
+    </div>`;
+  setTimeout(updateSimulatorConsolidado, 50);
+}function updateSimulatorSms() {
   const leads   = parseInt(document.getElementById('simSmsLeads')?.value) || 500;
   const nCamps  = parseInt(document.getElementById('simSmsCamps')?.value) || 5;
   const CUSTO   = 0.07;
@@ -1461,9 +1558,8 @@ function updateSimulatorSms() {
       }
     }
   });
-}
-
-function renderChartValDiaSms() {
+  setTimeout(updateSimulatorConsolidado, 50);
+}function renderChartValDiaSms() {
   const ctx = document.getElementById('chartValDiaSms');
   if (!ctx || !smsData.length) return;
   if (window._chartValDiaSms) window._chartValDiaSms.destroy();

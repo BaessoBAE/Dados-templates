@@ -305,11 +305,15 @@ async function loadData() {
   for (let i = 0; i < PROXIES.length; i++) {
     try {
       const proxyUrl = PROXIES[i](CSV_URL);
+      console.log('🔵 Proxy ' + (i+1) + ' URL:', proxyUrl.substring(0, 120));
       const res = await fetch(proxyUrl, { signal: AbortSignal.timeout(20000), cache: 'no-store' });
+      console.log('🔵 Proxy ' + (i+1) + ' status:', res.status);
       if (!res.ok) throw new Error('HTTP ' + res.status);
       const text = await res.text();
+      console.log('🔵 Proxy ' + (i+1) + ' chars:', text?.length, '| inicio:', text?.substring(0,80));
       if (!text || text.length < 10) throw new Error('Resposta vazia');
       allData = parseCSV(text);
+      console.log('✅ Proxy ' + (i+1) + ' rows:', allData.length);
       if (!allData.length) throw new Error('Nenhum dado válido encontrado.');
       setStatus(`Carregando canais adicionais...`, true);
       // DEBUG: log all campaign names to find encoding issues

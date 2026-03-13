@@ -285,7 +285,7 @@ function parseCSV(text) {
     const vals = parseLine(line), obj = {};
     headers.forEach((h,i) => obj[h] = (vals[i]||'').trim());
     return obj;
-  }).filter(r => r['Nome da Campanha'] && r['Template']);
+  }).filter(r => r['Nome da Campanha'] && r['ID do Ticket']);
 }
 
 // ── LOAD com fallback de proxies ─────────────────────────────────
@@ -387,7 +387,9 @@ async function loadChannelData() {
       console.log('SMS response length:', text ? text.length : 'null');
       if (text) {
         smsData = parseCSV(text);
-        console.log('SMS parsed rows:', smsData.length, '| first row keys:', smsData[0] ? Object.keys(smsData[0]).join(', ') : 'none');
+        console.log('SMS parsed rows:', smsData.length);
+        if(smsData[0]) console.log('SMS first row keys:', Object.keys(smsData[0]).join(', '));
+        if(smsData[0]) console.log('SMS first row sample:', JSON.stringify(smsData[0]).substring(0,200));
         if(smsNote) smsNote.textContent = '✓ ' + smsData.length + ' registros SMS carregados';
       } else {
         if(smsNote) { smsNote.style.color='var(--amber)'; smsNote.textContent = '⚠️ Resposta vazia — verifique a URL'; }
@@ -436,11 +438,17 @@ function pStatus(s) {
 function isEng(r) {
   return (r['Engajado']||'').toLowerCase()==='sim' || pStatus(r['Status do Lead'])==='engaged';
 }
+function isSmsRow(r) { return (r['Canal do Lead']||r['Canal do Ticket']||'').toUpperCase()==='SMS'; }
+
 function calcStats(rows) {
   const total     = rows.length;
-  const entregues = rows.filter(r=>['delivered','engaged'].includes(pStatus(r['Status do Lead']))).length;
+  // SMS: 'processing' = entregue (SMS não tem erro por definição)
+  const entregues = rows.filter(r=>{
+    const st = pStatus(r['Status do Lead']);
+    return ['delivered','engaged'].includes(st) || (isSmsRow(r) && r['Status do Lead']==='processing');
+  }).length;
   const engajados = rows.filter(r=>isEng(r)).length;
-  const erros     = rows.filter(r=>pStatus(r['Status do Lead'])==='error').length;
+  const erros     = rows.filter(r=> !isSmsRow(r) && pStatus(r['Status do Lead'])==='error').length;
   return { total, entregues, engajados, erros,
     pok:  total?(entregues/total*100):0,
     peng: total?(engajados/total*100):0,
@@ -561,10 +569,10 @@ function renderTodayCard(camp, tipo) {
     <div class="today-grid">
       <div class="today-card r"><div class="today-label">Total de Leads</div><div class="today-val">${s.total.toLocaleString()}</div><div class="today-note">${[...new Set(camp.rows.map(r=>r['Template']))].length} templates</div></div>
       <div class="today-card g"><div class="today-label">Leads sem Erro</div><div class="today-val">${(s.total-s.erros).toLocaleString()}</div><div class="today-note">alcançados</div></div>
-      <div class="today-card a"><div class="today-label">Leads com Erro</div><div class="today-val">${s.erros.toLocaleString()}</div><div class="today-note">${s.perr.toFixed(1)}% da base</div></div>
+      ${activeChannel==='sms' ? '' : `<div class="today-card a"><div class="today-label">Leads com Erro</div><div class="today-val">${s.erros.toLocaleString()}</div><div class="today-note">${s.perr.toFixed(1)}% da base</div></div>`}
       <div class="today-card g"><div class="today-label">Taxa de Entrega</div><div class="today-val">${s.pok.toFixed(1)}%</div><div class="today-note">${s.entregues.toLocaleString()} entregues</div></div>
       <div class="today-card p"><div class="today-label">Engajamento</div><div class="today-val">${s.peng.toFixed(1)}%</div><div class="today-note">${s.engajados.toLocaleString()} engajados</div></div>
-      <div class="today-card a"><div class="today-label">Taxa de Erro</div><div class="today-val">${s.perr.toFixed(1)}%</div><div class="today-note">${s.erros.toLocaleString()} falhas</div></div>
+      ${activeChannel==='sms' ? `<div class="today-card g"><div class="today-label">Canal</div><div class="today-val">📱 SMS</div><div class="today-note">100% entregues</div></div>` : `<div class="today-card a"><div class="today-label">Taxa de Erro</div><div class="today-val">${s.perr.toFixed(1)}%</div><div class="today-note">${s.erros.toLocaleString()} falhas</div></div>`}
     </div>
   </div>`;
 }

@@ -672,15 +672,17 @@ function renderGeral() {
     ${renderTodayCard(manha, 'manha')}
     ${renderTodayCard(tarde, 'tarde')}
 
-    <div class="sec-title" style="margin-top:.5rem">Visão Geral — Acumulado</div>
+    <div class="sec-title" style="margin-top:.5rem">${activeChannel==='sms'?'📱 SMS':activeChannel==='voz'?'🎙️ Voz':'💬 WhatsApp'} — Acumulado</div>
     <div class="sec-sub">${camps.length} campanha(s) · ${s.total.toLocaleString()} leads no total</div>
     <div class="metrics">
       <div class="mc r"><div class="mc-label">Total de Leads</div><div class="mc-val">${s.total.toLocaleString()}</div><div class="mc-note">${camps.length} campanhas</div></div>
       <div class="mc g"><div class="mc-label">Taxa de Entrega</div><div class="mc-val">${s.pok.toFixed(1)}%</div><div class="mc-note">${s.entregues.toLocaleString()} entregues</div></div>
+      ${activeChannel!=='sms'?`
       <div class="mc p"><div class="mc-label">Engajamento</div><div class="mc-val">${s.peng.toFixed(1)}%</div><div class="mc-note">${s.engajados.toLocaleString()} engajados</div></div>
-      <div class="mc a"><div class="mc-label">Taxa de Erro</div><div class="mc-val">${s.perr.toFixed(1)}%</div><div class="mc-note">${s.erros.toLocaleString()} falhas</div></div>
+      <div class="mc a"><div class="mc-label">Taxa de Erro</div><div class="mc-val">${s.perr.toFixed(1)}%</div><div class="mc-note">${s.erros.toLocaleString()} falhas</div></div>`:''}
     </div>
 
+    ${activeChannel!=='sms'?`
     <div class="igrid">
       <div class="icard"><h3><span class="dot dg"></span>Top Templates</h3><ul class="ilist">
         ${top3.map((t,i)=>`<li class="ii pos"><span class="iico">${['🥇','🥈','🥉'][i]}</span><strong>${t.name}</strong> — ${t.pok.toFixed(1)}% entrega · ${t.peng.toFixed(1)}% eng.</li>`).join('')}
@@ -688,23 +690,24 @@ function renderGeral() {
       <div class="icard"><h3><span class="dot dr"></span>Precisam de Atenção</h3><ul class="ilist">
         ${bot.length?bot.map(t=>`<li class="ii crit"><span class="iico">🔴</span><strong>${t.name}</strong> — ${t.pok.toFixed(1)}% entrega · ${t.perr.toFixed(1)}% erro</li>`).join(''):'<li class="ii pos"><span class="iico">✅</span>Todos os templates acima de 80%!</li>'}
       </ul></div>
-    </div>
+    </div>`:''}
 
     <div class="table-wrap" style="margin-bottom:1.5rem">
       <div class="table-top"><span class="table-top-title">Resumo por Campanha</span></div>
       <div class="table-scroll"><table>
-        <thead><tr><th>Campanha</th><th>Leads</th><th>% Entrega</th><th>% Engaj.</th><th>% Erro</th><th>Templates</th></tr></thead>
+        <thead><tr><th>Campanha</th><th>Leads</th><th>% Entrega</th>${activeChannel!=='sms'?'<th>% Engaj.</th><th>% Erro</th><th>Templates</th>':''}</tr></thead>
         <tbody>${camps.map(c=>{
-          const s=calcStats(c.rows),tmpl=[...new Set(c.rows.map(r=>r['Template']))].length;
+          const s=calcStats(c.rows),tmpl=[...new Set(c.rows.map(r=>r['Template']))].filter(Boolean).length;
           return`<tr><td><strong>${c.name}</strong></td><td>${s.total}</td>
             <td><span style="color:${cOk(s.pok)};font-weight:600">${s.pok.toFixed(1)}%</span></td>
-            <td style="color:${cEng(s.peng)};font-weight:500">${s.peng.toFixed(1)}%</td>
+            ${activeChannel!=='sms'?`<td style="color:${cEng(s.peng)};font-weight:500">${s.peng.toFixed(1)}%</td>
             <td style="color:${s.perr>20?'#FF4040':'var(--muted)'}">${s.perr.toFixed(1)}%</td>
-            <td>${tmpl}</td></tr>`;
+            <td>${tmpl}</td>`:''}</tr>`;
         }).join('')}</tbody>
       </table></div>
     </div>
 
+    ${activeChannel!=='sms'?`
     <div class="chart-grid">
       <div class="chart-card">
         <div class="chart-title">📈 % Entrega por Dia <span style="font-size:11px;color:var(--muted);font-weight:400">(manhã + tarde agrupadas)</span></div>
@@ -714,9 +717,9 @@ function renderGeral() {
         <div class="chart-title">❌ % Erro por Dia <span style="font-size:11px;color:var(--muted);font-weight:400">(manhã + tarde agrupadas)</span></div>
         <div class="chart-wrap"><canvas id="chartErro"></canvas></div>
       </div>
-    </div>`;
+    </div>`:''}`;
 
-  setTimeout(() => renderCharts(daily), 50);
+  if(activeChannel!=='sms') setTimeout(() => renderCharts(daily), 50);
 }
 
 function renderCharts(daily) {

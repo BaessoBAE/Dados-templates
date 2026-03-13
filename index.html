@@ -474,7 +474,7 @@ function getCampaigns(data) {
   return Object.values(map).sort((a, b) => {
     // Ordena pelo DDMM extraído do nome da campanha
     const toNum = name => {
-      const m = name.match(/(\d{4})$/);
+      const m = name.match(/(\d{4})\s*$/);
       if (!m) return 0;
       const dd = parseInt(m[1].slice(0,2)), mm = parseInt(m[1].slice(2,4));
       return mm * 10000 + dd; // MMDD garante ordem cronológica
@@ -549,14 +549,16 @@ function getTodayCampaigns(data) {
   const camps = getCampaigns(data);
   // Pega o último DDMM com campanhas
   const lastKey = (() => {
-    const keys = camps.map(c => { const m = c.name.match(/(\d{4})$/); return m ? m[1] : null; }).filter(Boolean);
+    const keys = camps.map(c => { const m = c.name.match(/(\d{4})(\s*)$/); return m ? m[1] : null; }).filter(Boolean);
     if (!keys.length) return null;
+    // Consistente com getCampaigns: MM*10000 + DD
     return keys.reduce((best, k) => {
-      const toN = s => parseInt(s.slice(2,4))*100 + parseInt(s.slice(0,2));
+      const toN = s => parseInt(s.slice(2,4))*10000 + parseInt(s.slice(0,2));
       return toN(k) > toN(best) ? k : best;
     });
   })();
-  const lastCamps = lastKey ? camps.filter(c => c.name.endsWith(lastKey)) : camps.slice(-2);
+  // Usa match em vez de endsWith para tolerar espaços/sufixos após os 4 dígitos
+  const lastCamps = lastKey ? camps.filter(c => c.name.match(new RegExp(lastKey + '\\s*$'))) : camps.slice(-2);
   const manhas = lastCamps.filter(c => getCampHorario(c) === 'manha');
   const tardes = lastCamps.filter(c => getCampHorario(c) === 'tarde');
   return {
@@ -570,8 +572,7 @@ function getDailyData(data) {
   const camps = getCampaigns(data);
   const map = {};
   camps.forEach(c => {
-    // Extrai data do nome: últimos 4 dígitos = DDMM
-    const match = c.name.match(/(\d{4})$/);
+    const match = c.name.match(/(\d{4})\s*$/);
     const key = match ? match[1] : c.name;
     const label = match ? match[1].replace(/(\d{2})(\d{2})/, '$1/$2') : c.name;
     if (!map[key]) map[key] = { key, label, rows: [] };

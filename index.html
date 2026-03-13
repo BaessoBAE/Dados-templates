@@ -177,7 +177,10 @@
     <h3>📱 SMS — URL do CSV (aba SMS)</h3>
     <input type="text" class="config-input" id="csvUrlSms" placeholder="https://docs.google.com/spreadsheets/d/e/XXXXX/pub?gid=XXXXX&single=true&output=csv"/>
     <div style="font-size:11px;color:var(--muted);margin:.4rem 0">Publique a aba <strong>SMS</strong> separadamente e cole a URL aqui. Deixe em branco se ainda não tiver dados.</div>
+    <div style="display:flex;gap:.5rem;flex-wrap:wrap">
     <button class="config-btn" style="background:var(--blue)" onclick="saveConfigSms()">Salvar SMS</button>
+    <button class="config-btn" style="background:var(--surface2);color:var(--muted);border:1px solid var(--border)" onclick="localStorage.removeItem('ak_csv_sms');document.getElementById('csvUrlSms').value='';document.getElementById('configNoteSms').textContent='Cache limpo. Cole a URL novamente.';smsData=[];renderGeral();">🗑 Limpar</button>
+  </div>
     <div style="font-size:12px;margin-top:.5rem" id="configNoteSms"></div>
   </div>
   <div class="config-card" style="border-top:2px solid var(--purple)">
@@ -354,13 +357,23 @@ async function fetchCSV(url, skipAppsScript=false) {
 async function loadChannelData() {
   // Load SMS
   if (CSV_URL_SMS) {
+    const smsNote = document.getElementById('configNoteSms');
     try {
+      if(smsNote) smsNote.textContent = '⏳ Buscando dados SMS...';
+      console.log('Fetching SMS from:', CSV_URL_SMS);
       const text = await fetchCSV(CSV_URL_SMS, true);
+      console.log('SMS response length:', text ? text.length : 'null');
       if (text) {
         smsData = parseCSV(text);
-        console.log('SMS loaded:', smsData.length, 'rows');
+        console.log('SMS parsed rows:', smsData.length, '| first row keys:', smsData[0] ? Object.keys(smsData[0]).join(', ') : 'none');
+        if(smsNote) smsNote.textContent = '✓ ' + smsData.length + ' registros SMS carregados';
+      } else {
+        if(smsNote) { smsNote.style.color='var(--amber)'; smsNote.textContent = '⚠️ Resposta vazia — verifique a URL'; }
       }
-    } catch(e) { console.warn('SMS load failed:', e); }
+    } catch(e) {
+      console.warn('SMS load failed:', e);
+      if(smsNote) { smsNote.style.color='#FF4040'; smsNote.textContent = '✗ Erro: ' + e.message; }
+    }
   }
   // Load VOZ
   if (CSV_URL_VOZ) {

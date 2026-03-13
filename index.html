@@ -280,10 +280,16 @@ function parseCSV(text) {
     result.push(cur.trim());
     return result;
   }
+  // Normaliza encoding corrompido no campo Nome da Campanha (manhÃ£ -> manha)
+  const fixEnc = s => (s||'')
+    .replace(/manh\u00c3\u00a3/gi, 'manh\u00e3')   // UTF-8 double-encoded
+    .replace(/manhÃ£/gi, 'manh\u00e3')               // literal Ã£
+    .replace(/manhÃ/gi,  'manh\u00e3');              // partial corruption
+
   const headers = parseLine(lines[0]);
   return lines.slice(1).map(line => {
     const vals = parseLine(line), obj = {};
-    headers.forEach((h,i) => obj[h] = (vals[i]||'').trim());
+    headers.forEach((h,i) => { obj[h] = fixEnc((vals[i]||'').trim()); });
     return obj;
   }).filter(r => r['Nome da Campanha'] && r['ID do Ticket']);
 }

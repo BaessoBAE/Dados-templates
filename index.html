@@ -1621,8 +1621,8 @@ function updateSimulatorConsolidado() {
       labels,
       datasets: [
         { label:'Enviados', data:entregues, backgroundColor:'rgba(0,201,122,.7)', borderRadius:3, yAxisID:'y' },
-        { label:'Custo Acumulado (R$)', data:custoAcum, type:'line', borderColor:'var(--blue)',
-          backgroundColor:'rgba(79,140,255,.1)', pointBackgroundColor:'var(--blue)',
+        { label:'Custo Acumulado (R$)', data:custoAcum, type:'line', borderColor:'#A78BFA',
+          backgroundColor:'rgba(167,139,250,.1)', pointBackgroundColor:'#A78BFA',
           pointRadius:3, borderWidth:2, tension:.35, fill:false, yAxisID:'y2' }
       ]
     },
@@ -1650,8 +1650,8 @@ function updateSimulatorConsolidado() {
       datasets: [{
         label: 'Valor Dia (R$)',
         data: daily.map(d => parseFloat((d.total * CUSTO).toFixed(2))),
-        borderColor: 'var(--blue)', backgroundColor: 'rgba(79,140,255,.08)',
-        pointBackgroundColor:'var(--blue)', pointBorderColor:'#0A0A0A',
+        borderColor: '#A78BFA', backgroundColor: 'rgba(167,139,250,.08)',
+        pointBackgroundColor:'#A78BFA', pointBorderColor:'#0A0A0A',
         pointRadius:5, borderWidth:2.5, tension:.35, fill:true
       }]
     },

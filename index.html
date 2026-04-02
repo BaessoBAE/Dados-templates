@@ -58,6 +58,19 @@
   .cs{text-align:center;padding:.4rem;background:var(--surface2);border-radius:6px}
   .cs-val{font-family:'Syne',sans-serif;font-size:16px;font-weight:700;line-height:1}
   .cs-label{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-top:2px}
+  .month-selector{display:grid;grid-template-columns:repeat(2,1fr);gap:1rem;margin-bottom:2rem;max-width:600px}
+  .month-card{background:var(--surface);border:2px solid var(--border);border-radius:12px;padding:1.5rem;cursor:pointer;transition:all .2s;position:relative;overflow:hidden}
+  .month-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
+  .month-card.march::before{background:var(--green)}.month-card.april::before{background:var(--blue)}
+  .month-card:hover{border-color:rgba(255,255,255,.2);transform:translateY(-2px)}
+  .month-card.active{border-color:var(--text);background:var(--surface2)}
+  .month-card.active.march{border-color:var(--green);background:rgba(0,201,122,.1)}
+  .month-card.active.april{border-color:var(--blue);background:rgba(74,158,255,.1)}
+  .month-icon{font-size:24px;margin-bottom:.5rem}
+  .month-title{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;margin-bottom:.3rem}
+  .month-sub{font-size:11px;color:var(--muted)}
+  .month-expanded{margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border)}
+  .month-expanded-title{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.8rem;font-weight:600}
   .filter-bar{display:flex;gap:.6rem;margin-bottom:1.5rem;flex-wrap:wrap;align-items:center}
   .filter-label{font-size:12px;color:var(--muted)}
   .filter-btn{padding:5px 13px;border-radius:8px;font-size:12px;font-weight:500;cursor:pointer;border:1px solid var(--border);background:var(--surface2);color:var(--muted);transition:all .2s;font-family:'DM Sans',sans-serif}
@@ -113,7 +126,7 @@
   .today-header{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;margin-bottom:1rem;display:flex;align-items:center;gap:8px}
   .today-section{background:var(--surface);border:1px solid rgba(74,158,255,.3);border-radius:12px;padding:1.4rem;margin-bottom:1.5rem;position:relative;overflow:hidden}
   .today-section::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--blue),var(--purple))}
-  @media(max-width:768px){.metrics{grid-template-columns:1fr 1fr}.igrid{grid-template-columns:1fr}.chart-grid{grid-template-columns:1fr}.today-grid{grid-template-columns:1fr 1fr}.content{padding:1.2rem}header{padding:0 1.2rem}.tabs{padding:0 1.2rem}}
+  @media(max-width:768px){.metrics{grid-template-columns:1fr 1fr}.igrid{grid-template-columns:1fr}.chart-grid{grid-template-columns:1fr}.today-grid{grid-template-columns:1fr 1fr}.content{padding:1.2rem}header{padding:0 1.2rem}.tabs{padding:0 1.2rem}.month-selector{grid-template-columns:1fr}.month-card{padding:1.2rem}}
 </style>
 </head>
 <body>
@@ -138,13 +151,18 @@
   <div class="tab" onclick="show('config',this)">⚙️ Configurar</div>
 </div>
 
-<div id="geral"     class="panel active content"><div id="geralContent"><div class="loading"><div class="spinner"></div><div class="loading-text">Buscando dados...</div><div class="loading-sub">Isso pode levar alguns segundos</div></div></div></div>
+<div id="geral" class="panel active content">
+  <div class="filter-bar" id="geralFilterBar" style="margin-bottom:1.5rem"></div>
+  <div id="geralContent"><div class="loading"><div class="spinner"></div><div class="loading-text">Buscando dados...</div><div class="loading-sub">Isso pode levar alguns segundos</div></div></div>
+</div>
+
 <div id="campanhas" class="panel content">
   <div class="sec-title">Campanhas</div>
-  <div class="sec-sub">Clique em uma campanha para ver o detalhe por template</div>
-  <div id="campCards" class="camp-grid"></div>
+  <div class="sec-sub">Selecione um mês para ver as campanhas</div>
+  <div id="monthSelector" class="month-selector"></div>
   <div id="campDetail"></div>
 </div>
+
 <div id="templates" class="panel content">
   <div class="sec-title">Ranking de Templates</div>
   <div class="sec-sub">Performance acumulada de todas as campanhas</div>
@@ -160,6 +178,7 @@
 </div>
 
 <div id="valores" class="panel content">
+  <div class="filter-bar" id="valoresFilterBar"></div>
   <div id="valoresContent"><div class="loading"><div class="spinner"></div><div class="loading-text">Carregando análise financeira...</div></div></div>
 </div>
 
@@ -180,11 +199,11 @@
     <div style="display:flex;gap:.5rem;flex-wrap:wrap">
     <button class="config-btn" style="background:var(--blue)" onclick="saveConfigSms()">Salvar SMS</button>
     <button class="config-btn" style="background:var(--surface2);color:var(--muted);border:1px solid var(--border)" onclick="localStorage.removeItem('ak_csv_sms');document.getElementById('csvUrlSms').value='';document.getElementById('configNoteSms').textContent='Cache limpo. Cole a URL novamente.';smsData=[];renderGeral();">🗑 Limpar</button>
-  </div>
+   </div>
     <div style="font-size:12px;margin-top:.5rem" id="configNoteSms"></div>
   </div>
   <div class="config-card" style="border-top:2px solid var(--purple)">
-    <h3>🎙️ Voz — URL do CSV (aba Voz)</h3>
+    <h3>🎙�� Voz — URL do CSV (aba Voz)</h3>
     <input type="text" class="config-input" id="csvUrlVoz" placeholder="https://docs.google.com/spreadsheets/d/e/XXXXX/pub?gid=XXXXX&single=true&output=csv"/>
     <div style="font-size:11px;color:var(--muted);margin:.4rem 0">Publique a aba <strong>Voz</strong> separadamente e cole a URL aqui. Deixe em branco se ainda não tiver dados.</div>
     <button class="config-btn" style="background:var(--purple)" onclick="saveConfigVoz()">Salvar Voz</button>
@@ -201,12 +220,10 @@
 <script>
 const DEFAULT_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQf3O5GB-oOMC0e2vx5ek7S09M8G3YYHI165BvayKNmKT9c0fimdsvrMUnwBKsDoZa7YF6Z35kjg0yc/pub?output=csv';
 
-// Lista de proxies para tentar em sequência
-// Apps Script próprio como proxy principal — muito mais estável
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwptDZmzLkfPhCUpwmh-E6Ifh3LLfyqu3GUG_0Z8yGOntK5udcASCVGHDlDsDa2X3zq4w/exec';
 
 const PROXIES = [
-  _url => `${APPS_SCRIPT_URL}?_=${Date.now()}`,  // proxy próprio — sempre funciona
+  _url => `${APPS_SCRIPT_URL}?_=${Date.now()}`,
   url => `https://corsproxy.io/?${encodeURIComponent(url)}&_=${Date.now()}`,
   url => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}&_=${Date.now()}`,
   url => url
@@ -216,14 +233,13 @@ let CSV_URL = localStorage.getItem('ak_csv_url') || DEFAULT_CSV;
 let allData = [];
 let smsData = [];
 let vozData = [];
-let activeChannel = 'whatsapp'; // 'whatsapp' | 'sms' | 'voz'
+let activeChannel = 'whatsapp';
 let selectedCamp = null;
 let currentFilter = 'todos';
+let currentMonthFilter = 'all';
+let selectedMonth = null;
 
-// URLs por canal — detectadas a partir da URL base da planilha
 function buildSheetUrl(baseUrl, gid) {
-  // Converte URL de publicação para incluir GID específico da aba
-  // Formato: ...pub?gid=XXXXXX&single=true&output=csv
   const base = baseUrl.split('?')[0];
   return base + '?gid=' + gid + '&single=true&output=csv';
 }
@@ -231,7 +247,6 @@ let CSV_URL_SMS = localStorage.getItem('ak_csv_sms') || '';
 let CSV_URL_VOZ = localStorage.getItem('ak_csv_voz') || '';
 
 document.getElementById('csvUrl').value = CSV_URL;
-// Pre-fill SMS and VOZ URLs if saved
 if (CSV_URL_SMS && document.getElementById('csvUrlSms')) document.getElementById('csvUrlSms').value = CSV_URL_SMS;
 if (CSV_URL_VOZ && document.getElementById('csvUrlVoz')) document.getElementById('csvUrlVoz').value = CSV_URL_VOZ;
 
@@ -265,9 +280,7 @@ function saveConfigVoz() {
   loadChannelData();
 }
 
-// ── CSV PARSER ───────────────────────────────────────────────────
 function parseCSV(text) {
-  // Parser robusto: respeita \n dentro de campos entre aspas
   const fixEnc = s => (s||'')
     .replace(/ManhÃ£/g, 'Manhã').replace(/manhÃ£/g, 'manhã')
     .replace(/ManhÃ/g,  'Manhã').replace(/manhÃ/g,  'manhã');
@@ -304,7 +317,6 @@ function parseCSV(text) {
   }).filter(r => r['Nome da Campanha'] && r['ID do Ticket']);
 }
 
-// ── LOAD com fallback de proxies ─────────────────────────────────
 async function loadData() {
   setStatus('Carregando...', false);
   showLoading();
@@ -335,7 +347,6 @@ async function loadData() {
 
     if (!allRows.length) throw new Error('Nenhum dado encontrado.');
 
-    // Aplica fixEnc e filtra
     const fixEnc = s => (s||'')
       .replace(/ManhÃ£/g, 'Manhã').replace(/manhÃ£/g, 'manhã')
       .replace(/ManhÃ/g,  'Manhã').replace(/manhÃ/g,  'manhã');
@@ -346,7 +357,6 @@ async function loadData() {
         return obj;
       });
 
-    // Debug: ver o que está sendo filtrado
     const semCamp = mapped.filter(r => !r['Nome da Campanha']);
     const semTicket = mapped.filter(r => r['Nome da Campanha'] && !r['ID do Ticket']);
     console.log(`🔍 Filtro: ${mapped.length} total | ${semCamp.length} sem campanha | ${semTicket.length} sem ticket`);
@@ -370,7 +380,6 @@ async function loadData() {
     setStatus('Tentando fallback CSV...', false);
   }
 
-  // Fallback: CSV direto via proxies
   const fallbackProxies = [
     url => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}&_=${Date.now()}`,
     url => `https://corsproxy.io/?${encodeURIComponent(url)}&_=${Date.now()}`,
@@ -397,8 +406,6 @@ async function loadData() {
 }
 
 async function fetchCSV(url, skipAppsScript=false) {
-  // For SMS/VOZ: skip Apps Script (only serves WhatsApp) and corsproxy (unreliable)
-  // Try allorigins first, then direct
   if (skipAppsScript) {
     const secondary = [
       u => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}&_=${Date.now()}`,
@@ -413,14 +420,12 @@ async function fetchCSV(url, skipAppsScript=false) {
         if (!res.ok) { console.log('HTTP error:', res.status); continue; }
         const text = await res.text();
         console.log('Got text, first 80 chars:', text.substring(0,80));
-        // Validate it's CSV: must start with a text char, not HTML '<'
         if (text && text.length > 10 && !text.trimStart().startsWith('<')) return text;
         console.log('Response looks like HTML, skipping');
       } catch(e) { console.log('Proxy failed:', e.message); }
     }
     return null;
   }
-  // WhatsApp: use normal proxy chain
   for (let i = 0; i < PROXIES.length; i++) {
     try {
       const proxyUrl = PROXIES[i](url);
@@ -428,13 +433,12 @@ async function fetchCSV(url, skipAppsScript=false) {
       if (!res.ok) continue;
       const text = await res.text();
       if (text && text.length > 10) return text;
-    } catch(e) { /* try next */ }
+    } catch(e) { }
   }
   return null;
 }
 
 async function loadChannelData() {
-  // Load SMS
   if (CSV_URL_SMS) {
     const smsNote = document.getElementById('configNoteSms');
     try {
@@ -456,7 +460,6 @@ async function loadChannelData() {
       if(smsNote) { smsNote.style.color='#FF4040'; smsNote.textContent = '✗ Erro: ' + e.message; }
     }
   }
-  // Load VOZ
   if (CSV_URL_VOZ) {
     try {
       const text = await fetchCSV(CSV_URL_VOZ, true);
@@ -466,7 +469,6 @@ async function loadChannelData() {
       }
     } catch(e) { console.warn('Voz load failed:', e); }
   }
-  // Re-render geral to update channel cards
   if (smsData.length || vozData.length) renderGeral();
 }
 
@@ -499,7 +501,6 @@ function isSmsRow(r) { return (r['Canal do Lead']||r['Canal do Ticket']||'').toU
 
 function calcStats(rows) {
   const total     = rows.length;
-  // SMS: 'processing' = entregue (SMS não tem erro por definição)
   const entregues = rows.filter(r=>{
     const st = pStatus(r['Status do Lead']);
     return ['delivered','engaged'].includes(st) || (isSmsRow(r) && r['Status do Lead']==='processing');
@@ -511,21 +512,32 @@ function calcStats(rows) {
     peng: total?(engajados/total*100):0,
     perr: total?(erros/total*100):0 };
 }
+
+function getMonthFromCamp(campName) {
+  const m = campName.match(/(\d{4})\s*$/);
+  if (!m) return null;
+  return m[1].slice(2,4);
+}
+
 function getCampaigns(data) {
   const src = data || allData;
   const map={};
   src.forEach(r=>{ const n=r['Nome da Campanha']; if(!map[n]) map[n]={name:n,rows:[]}; map[n].rows.push(r); });
   return Object.values(map).sort((a, b) => {
-    // Ordena pelo DDMM extraído do nome da campanha
     const toNum = name => {
       const m = name.match(/(\d{4})\s*$/);
       if (!m) return 0;
       const dd = parseInt(m[1].slice(0,2)), mm = parseInt(m[1].slice(2,4));
-      return mm * 10000 + dd; // MMDD garante ordem cronológica
+      return mm * 10000 + dd;
     };
     return toNum(a.name) - toNum(b.name);
   });
 }
+
+function getCampaignsByMonth(month) {
+  return getCampaigns().filter(c => getMonthFromCamp(c.name) === month);
+}
+
 function getTmplRank(data) {
   const src = data || allData;
   const map={};
@@ -558,16 +570,14 @@ function renderAll() {
 }
 
 function normalizeCampName(str) {
-  // Normaliza encoding corrompido (manhÃ£ → manha) e remove acentos
   return (str || '')
     .toLowerCase()
     .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')  // remove diacríticos
-    .replace(/[^\x00-\x7F]/g, 'a');  // substitui qualquer char não-ASCII por 'a'
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^\x00-\x7F]/g, 'a');
 }
 
 function getCampHorario(camp) {
-  // Detecta manhã ou tarde — normaliza encoding corrompido antes de comparar
   const name = normalizeCampName(camp.name || '');
   if (name.includes('manh')) return 'manha';
   if (name.includes('tarde')) return 'tarde';
@@ -579,40 +589,33 @@ function getCampHorarioLabel(camp) {
 }
 
 function getCampHorarioTime(camp) {
-  // Pega hora:minuto do primeiro registro da coluna "Data de Criação do Ticket"
   const row = camp.rows.find(r => r['Data de Criação do Ticket'] && r['Data de Criação do Ticket'].includes(':'));
   if (!row) return '';
-  const raw = row['Data de Criação do Ticket']; // ex: "06/03/2026, 09:42:51"
+  const raw = row['Data de Criação do Ticket'];
   const match = raw.match(/(\d{2}:\d{2})/);
   return match ? match[1] : '';
 }
 
 function getTodayCampaigns(data) {
-  // Pega as campanhas mais recentes de manhã e tarde
-  // Pode haver mais de uma tarde/manhã no mesmo dia
   const camps = getCampaigns(data);
-  // Pega o último DDMM com campanhas
   const lastKey = (() => {
     const keys = camps.map(c => { const m = c.name.match(/(\d{4})(\s*)$/); return m ? m[1] : null; }).filter(Boolean);
     if (!keys.length) return null;
-    // Consistente com getCampaigns: MM*10000 + DD
     return keys.reduce((best, k) => {
       const toN = s => parseInt(s.slice(2,4))*10000 + parseInt(s.slice(0,2));
       return toN(k) > toN(best) ? k : best;
     });
   })();
-  // Usa match em vez de endsWith para tolerar espaços/sufixos após os 4 dígitos
   const lastCamps = lastKey ? camps.filter(c => c.name.match(new RegExp(lastKey + '\\s*$'))) : camps.slice(-2);
   const manhas = lastCamps.filter(c => getCampHorario(c) === 'manha');
   const tardes = lastCamps.filter(c => getCampHorario(c) === 'tarde');
   return {
     manha: manhas.length ? manhas[manhas.length - 1] : null,
-    tarde: tardes,  // array — pode ter mais de uma
+    tarde: tardes,
   };
 }
 
 function getDailyData(data) {
-  // Agrupa campanhas por dia (manhã + tarde juntas) para o gráfico
   const camps = getCampaigns(data);
   const map = {};
   camps.forEach(c => {
@@ -622,10 +625,8 @@ function getDailyData(data) {
     if (!map[key]) map[key] = { key, label, rows: [] };
     map[key].rows.push(...c.rows);
   });
-  // Ordena cronologicamente por DDMM (ex: 0403 < 0503 < 1003)
   return Object.values(map)
     .sort((a, b) => {
-      // Converte DDMM para número comparável: dia*100 + mes → ordena por mes*100 + dia
       const toNum = k => { const dd = parseInt(k.slice(0,2)), mm = parseInt(k.slice(2,4)); return mm * 100 + dd; };
       return toNum(a.key) - toNum(b.key);
     })
@@ -643,7 +644,7 @@ function renderTodayCard(camp, tipo, idx=0) {
   return `
   <div class="today-section" style="border-color:${tipo==='manha'?'rgba(74,158,255,.3)':'rgba(245,166,35,.3)'}">
     <div style="position:absolute;top:0;left:0;right:0;height:3px;background:${tipo==='manha'?'linear-gradient(90deg,var(--blue),var(--purple))':'linear-gradient(90deg,var(--amber),#FF4040)'}"></div>
-    <div class="today-header">${tipo==='manha'?'🌅':'🌆'} Campanha ${tipo==='manha'?'Manhã':(idx>0?`Tarde ${idx}`:'Tarde')}${timeStr} — <span style="color:${tipo==='manha'?'var(--blue)':'var(--amber)'}">${camp.name}</span></div>
+    <div class="today-header">${tipo==='manha'?'🌅':'🌆'} Campanha ${tipo==='manha'?'Manhã':(idx>0?`Tarde ${idx}`:'Tarde')}${timeStr} — <span style="color:${tipo==='manha'?'var(--blue)':'var(--amber)'}}">${camp.name}</span></div>
     <div class="today-grid">
       <div class="today-card r"><div class="today-label">Total de Leads</div><div class="today-val">${s.total.toLocaleString()}</div><div class="today-note">${[...new Set(camp.rows.map(r=>r['Template']))].length} templates</div></div>
       <div class="today-card g"><div class="today-label">Leads sem Erro</div><div class="today-val">${(s.total-s.erros).toLocaleString()}</div><div class="today-note">alcançados</div></div>
@@ -717,11 +718,54 @@ function switchChannel(ch) {
   renderGeral();
 }
 
+function renderMonthFilterBar() {
+  const barEl = document.getElementById('geralFilterBar');
+  if (!barEl) return;
+  barEl.innerHTML = `
+    <span class="filter-label">Mês:</span>
+    <button class="filter-btn ${currentMonthFilter === 'all' ? 'active' : ''}" onclick="setMonthFilter('all', this)">Todos</button>
+    <button class="filter-btn ${currentMonthFilter === '03' ? 'active' : ''}" onclick="setMonthFilter('03', this)">Março (03)</button>
+    <button class="filter-btn ${currentMonthFilter === '04' ? 'active' : ''}" onclick="setMonthFilter('04', this)">Abril (04)</button>
+  `;
+}
+
+function renderValoresFilterBar() {
+  const barEl = document.getElementById('valoresFilterBar');
+  if (!barEl) return;
+  barEl.innerHTML = `
+    <span class="filter-label">Período:</span>
+    <button class="filter-btn ${currentMonthFilter === 'all' ? 'active' : ''}" onclick="setMonthFilter('all', this); setTimeout(() => renderValores(), 100)">Todos</button>
+    <button class="filter-btn ${currentMonthFilter === '03' ? 'active' : ''}" onclick="setMonthFilter('03', this); setTimeout(() => renderValores(), 100)">Março (03)</button>
+    <button class="filter-btn ${currentMonthFilter === '04' ? 'active' : ''}" onclick="setMonthFilter('04', this); setTimeout(() => renderValores(), 100)">Abril (04)</button>
+  `;
+}
+
+function setMonthFilter(month, btn) {
+  currentMonthFilter = month;
+  document.querySelectorAll('.filter-btn').forEach(b => {
+    if (b.parentElement.id === 'geralFilterBar' || b.parentElement.id === 'valoresFilterBar') {
+      b.classList.remove('active');
+    }
+  });
+  btn.classList.add('active');
+  renderGeral();
+}
+
+function getFilteredData(data) {
+  if (currentMonthFilter === 'all') return data;
+  const camps = getCampaigns(data);
+  const filteredCamps = camps.filter(c => getMonthFromCamp(c.name) === currentMonthFilter);
+  const rows = [];
+  filteredCamps.forEach(c => rows.push(...c.rows));
+  return rows;
+}
+
 function renderGeral() {
   const data = getActiveData();
   const el = document.getElementById('geralContent');
 
-  // Always show channel cards first
+  renderMonthFilterBar();
+
   if (!data.length) {
     const isEmpty = activeChannel !== 'whatsapp';
     el.innerHTML = renderChannelCards() + (isEmpty
@@ -734,14 +778,14 @@ function renderGeral() {
     return;
   }
 
-  // Save original allData reference and swap for active channel
+  const filteredData = getFilteredData(data);
   const _orig = allData;
-  if (activeChannel !== 'whatsapp') allData = data;
+  if (activeChannel !== 'whatsapp') allData = filteredData;
 
-  const camps=getCampaigns(data), s=calcStats(data), rank=getTmplRank(data);
+  const camps=getCampaigns(filteredData), s=calcStats(filteredData), rank=getTmplRank(filteredData);
   const top3=rank.slice(0,3), bot=rank.filter(t=>t.pok<75).slice(0,3);
-  const { manha, tarde } = getTodayCampaigns(data);
-  const daily = getDailyData(data);
+  const { manha, tarde } = getTodayCampaigns(filteredData);
+  const daily = getDailyData(filteredData);
 
   allData = _orig;
 
@@ -766,7 +810,7 @@ function renderGeral() {
         ${top3.map((t,i)=>`<li class="ii pos"><span class="iico">${['🥇','🥈','🥉'][i]}</span><strong>${t.name}</strong> — ${t.pok.toFixed(1)}% entrega · ${t.peng.toFixed(1)}% eng.</li>`).join('')}
       </ul></div>
       <div class="icard"><h3><span class="dot dr"></span>Precisam de Atenção</h3><ul class="ilist">
-        ${bot.length?bot.map(t=>`<li class="ii crit"><span class="iico">🔴</span><strong>${t.name}</strong> — ${t.pok.toFixed(1)}% entrega · ${t.perr.toFixed(1)}% erro</li>`).join(''):'<li class="ii pos"><span class="iico">✅</span>Todos os templates acima de 80%!</li>'}
+        ${bot.length?bot.map(t=>`<li class="ii crit"><span class="iico">🔴</span><strong>${t.name}</strong> — ${t.pok.toFixed(1)}% entrega · ${t.perr.toFixed(1)}% erro</li>`).join(''):' <li class="ii pos"><span class="iico">✅</span>Todos os templates acima de 80%!</li>'}
       </ul></div>
     </div>`:''}
 
@@ -891,35 +935,66 @@ function renderCharts(daily) {
     }
   });
 }
+
 function renderCampCards() {
+  const monthSel = document.getElementById('monthSelector');
+  if (!monthSel) return;
+
   const camps = getCampaigns();
-  document.getElementById('campCards').innerHTML = camps.map((c, idx)=>{
-    const s=calcStats(c.rows);
-    return`<div class="camp-card ${selectedCamp===c.name?'selected':''}" data-idx="${idx}" onclick="selectCampByIdx(${idx})">
-      <div class="camp-name">${c.name}</div>
-      <div class="camp-meta">${s.total.toLocaleString()} leads · ${[...new Set(c.rows.map(r=>r['Template']))].length} templates</div>
-      <div class="camp-stats">
-        <div class="cs"><div class="cs-val" style="color:${cOk(s.pok)}">${s.pok.toFixed(0)}%</div><div class="cs-label">Entrega</div></div>
-        <div class="cs"><div class="cs-val" style="color:var(--purple)">${s.peng.toFixed(0)}%</div><div class="cs-label">Engaj.</div></div>
-        <div class="cs"><div class="cs-val" style="color:${s.perr>20?'#FF4040':'var(--amber)'}">${s.perr.toFixed(0)}%</div><div class="cs-label">Erro</div></div>
-      </div></div>`;
-  }).join('');
+  const march = getCampaignsByMonth('03');
+  const april = getCampaignsByMonth('04');
+
+  monthSel.innerHTML = `
+    <div class="month-card march active" onclick="selectMonth('03', this)">
+      <div class="month-icon">📅</div>
+      <div class="month-title">Março (03)</div>
+      <div class="month-sub">${march.length} campanhas · ${march.reduce((sum, c) => sum + c.rows.length, 0).toLocaleString()} leads</div>
+    </div>
+    <div class="month-card april" onclick="selectMonth('04', this)">
+      <div class="month-icon">📅</div>
+      <div class="month-title">Abril (04)</div>
+      <div class="month-sub">${april.length} campanhas · ${april.reduce((sum, c) => sum + c.rows.length, 0).toLocaleString()} leads</div>
+    </div>
+  `;
 }
 
-function selectCampByIdx(idx) {
-  const camps = getCampaigns();
-  const camp = camps[idx];
-  if (!camp) return;
-  selectCamp(camp.name);
+function selectMonth(month, card) {
+  selectedMonth = month;
+  document.querySelectorAll('.month-card').forEach(c => c.classList.remove('active'));
+  card.classList.add('active');
+  renderMonthCampaigns(month);
+}
+
+function renderMonthCampaigns(month) {
+  const camps = getCampaignsByMonth(month);
+  const detail = document.getElementById('campDetail');
+
+  const monthName = month === '03' ? 'Março' : 'Abril';
+
+  detail.innerHTML = `
+    <div style="margin-top:2rem">
+      <div class="sec-title">Campanhas de ${monthName}</div>
+      <div class="sec-sub">${camps.length} campanha(s) encontradas</div>
+      <div class="camp-grid">
+        ${camps.map((c, idx) => {
+          const s = calcStats(c.rows);
+          return `<div class="camp-card" onclick="selectCamp('${c.name}')">
+            <div class="camp-name">${c.name}</div>
+            <div class="camp-meta">${s.total.toLocaleString()} leads · ${[...new Set(c.rows.map(r=>r['Template']))].length} templates</div>
+            <div class="camp-stats">
+              <div class="cs"><div class="cs-val" style="color:${cOk(s.pok)}">${s.pok.toFixed(0)}%</div><div class="cs-label">Entrega</div></div>
+              <div class="cs"><div class="cs-val" style="color:var(--purple)">${s.peng.toFixed(0)}%</div><div class="cs-label">Engaj.</div></div>
+              <div class="cs"><div class="cs-val" style="color:${s.perr>20?'#FF4040':'var(--amber)'}">${s.perr.toFixed(0)}%</div><div class="cs-label">Erro</div></div>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>
+  `;
 }
 
 function selectCamp(name) {
   selectedCamp = name;
-
-  // Atualiza visual dos cards
-  document.querySelectorAll('.camp-card').forEach(el => {
-    el.classList.toggle('selected', Number(el.dataset.idx) === getCampaigns().findIndex(c=>c.name===name));
-  });
 
   const camp = getCampaigns().find(c=>c.name===name);
   if (!camp) return;
@@ -929,8 +1004,10 @@ function selectCamp(name) {
   const rows=Object.values(map).map(rs=>{const s=calcStats(rs);return{name:rs[0]['Template'],...s};}).sort((a,b)=>b.pok-a.pok);
 
   const detail = document.getElementById('campDetail');
-  detail.innerHTML=`
-    <div class="table-wrap">
+  const existing = detail.querySelector('.table-wrap');
+  
+  const tableHtml = `
+    <div class="table-wrap" style="margin-top:2rem">
       <div class="table-top">
         <span class="table-top-title">📋 Detalhe — ${name}</span>
         <span style="font-size:11px;color:var(--muted)">🟢 ≥90% · 🟡 80–89% · 🔴 &lt;80%</span>
@@ -947,8 +1024,11 @@ function selectCamp(name) {
           <td>${bOk(r.pok)}</td></tr>`).join('')}
         </tbody></table></div></div>`;
 
-  // Rola suavemente para mostrar o detalhe
-  setTimeout(() => detail.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+  if (existing) {
+    existing.outerHTML = tableHtml;
+  } else {
+    detail.innerHTML += tableHtml;
+  }
 }
 
 function filterTmpl(f,btn) {
@@ -958,7 +1038,6 @@ function filterTmpl(f,btn) {
   renderTemplates();
 }
 function getTmplHistory(name) {
-  // Retorna performance por campanha para o template
   const camps = getCampaigns();
   return camps.map(c => {
     const rows = c.rows.filter(r => r['Template'] === name);
@@ -1076,10 +1155,7 @@ function openTmplModal(name) {
             backgroundColor: '#1C1C1C', borderColor: '#2A2A2A', borderWidth: 1,
             titleColor: '#F0F0F0', bodyColor: '#aaa',
             callbacks: { label: ctx => ` ${ctx.dataset.label}: ${ctx.raw}%` }
-          },
-          annotation: { annotations: {
-            linha75: { type: 'line', yMin: 75, yMax: 75, borderColor: 'rgba(245,166,35,.4)', borderWidth: 1, borderDash: [4,3], label: { content: '75%', display: true, color: '#F5A623', font: { size: 10 } } }
-          }}
+          }
         },
         scales: {
           x: { ticks: { color: '#555', font: { size: 10 }, maxRotation: 35 }, grid: { color: '#1A1A1A' } },
@@ -1091,12 +1167,6 @@ function openTmplModal(name) {
   }, 80);
 }
 
-function filterTmpl(f,btn) {
-  currentFilter=f;
-  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
-  btn.classList.add('active');
-  renderTemplates();
-}
 function renderTemplates() {
   let rank=getTmplRank();
   if (currentFilter==='otimo') rank=rank.filter(t=>t.pok>=90);
@@ -1123,49 +1193,45 @@ function renderTemplates() {
         }).join('')}
         </tbody></table></div></div>`;
 
-  // Event delegation - safer than inline onclick
   document.querySelectorAll('.tmpl-row').forEach(row => {
     row.addEventListener('click', () => openTmplModal(row.dataset.tmpl));
   });
 }
-
 
 function renderValores() {
   const el = document.getElementById('valoresContent');
   if (!el) return;
   if (!allData.length) { el.innerHTML='<div class="loading"><div class="loading-text">Sem dados carregados.</div></div>'; return; }
 
-  const daily = getDailyData();
-  const camps = getCampaigns();
+  renderValoresFilterBar();
+
+  const filteredData = getFilteredData(allData);
+  const daily = getDailyData(filteredData);
+  const camps = getCampaigns(filteredData);
   const CUSTO = 0.43;
   const CUSTO_SMS = 0.07;
 
-  // Totais reais WhatsApp
-  const totalLeads = allData.length;
-  const totalEntregues = allData.filter(r => pStatus(r['Status do Lead']) !== 'error').length;
+  const totalLeads = filteredData.length;
+  const totalEntregues = filteredData.filter(r => pStatus(r['Status do Lead']) !== 'error').length;
   const totalErros = totalLeads - totalEntregues;
   const totalGasto = totalEntregues * CUSTO;
   const totalEconomia = totalErros * CUSTO;
 
-  // Totais reais Voz (placeholder — custo a definir)
-  const CUSTO_VOZ = 0.15; // placeholder
+  const CUSTO_VOZ = 0.15;
   const vozEntregues = vozData.length ? calcStats(vozData).entregues : 0;
   const vozGasto = vozEntregues * CUSTO_VOZ;
 
-  // Total mês consolidado
   const smsGasto = smsData.length * CUSTO_SMS;
   const totalMes = totalGasto + smsGasto + vozGasto;
 
-  // Médias reais de % entrega e % erro por campanha
   const taxasEntrega = camps.map(camp => calcStats(camp.rows).pok);
-  const mediaEntrega = taxasEntrega.reduce((a,b)=>a+b,0) / taxasEntrega.length;
+  const mediaEntrega = taxasEntrega.length > 0 ? taxasEntrega.reduce((a,b)=>a+b,0) / taxasEntrega.length : 0;
   const mediaErro = 100 - mediaEntrega;
 
   el.innerHTML = `
-    <!-- ══ PAINEL CONSOLIDADO ══ -->
-    <div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:700;margin-bottom:.3rem">📊 Resumo Consolidado — Mês</div>
+    <div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:700;margin-bottom:.3rem">📊 Resumo Consolidado — Período</div>
     <div class="sec-sub" style="margin-bottom:1rem">Investimento real acumulado por canal</div>
-    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:.8rem;margin-bottom:.8rem">
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:.8rem;margin-bottom:1rem">
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1rem;border-top:2px solid var(--green)">
         <div style="font-size:9px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:.4rem">💬 Total WhatsApp</div>
         <div style="font-family:'Syne',sans-serif;font-size:22px;font-weight:700;color:var(--green)">R$ ${totalGasto.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
@@ -1188,19 +1254,14 @@ function renderValores() {
              <div style="font-size:11px;color:var(--border);margin-top:.3rem">sem dados</div>`}
       </div>
       <div style="background:var(--surface);border:2px solid var(--amber);border-radius:10px;padding:1rem">
-        <div style="font-size:9px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:.4rem">💰 Total Investido Mês</div>
+        <div style="font-size:9px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:.4rem">💰 Total Período</div>
         <div style="font-family:'Syne',sans-serif;font-size:22px;font-weight:700;color:var(--amber)">R$ ${totalMes.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
         <div style="font-size:11px;color:var(--muted);margin-top:.3rem">WPP + SMS${vozData.length?' + Voz':''}</div>
       </div>
     </div>
 
-    <!-- Cards simulados (preenchidos por updateSimulatorConsolidado) -->
-    <div id="simConsolidadoCards" style="display:grid;grid-template-columns:repeat(4,1fr);gap:.8rem;margin-bottom:2rem"></div>
+    <div style="border-top:1px solid var(--border);margin:1.5rem 0"></div>
 
-    <!-- ══ DIVISOR ══ -->
-    <div style="border-top:1px solid var(--border);margin:0 0 1.8rem"></div>
-
-    <!-- ══ WHATSAPP ══ -->
     <div style="display:flex;align-items:center;gap:.6rem;margin-bottom:.5rem">
       <span style="font-size:18px">💬</span>
       <div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:700">WhatsApp — Análise Financeira</div>
@@ -1229,443 +1290,8 @@ function renderValores() {
         <div style="font-size:11px;color:var(--muted);margin-top:.3rem">base: ${camps.length} campanhas</div>
       </div>
     </div>
-
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1.2rem;margin-bottom:1.2rem">
-      <div style="font-family:'Syne',sans-serif;font-size:13px;font-weight:700;margin-bottom:1rem;color:var(--text)">📈 Entrega e Erro por Dia — Real (WhatsApp)</div>
-      <div style="position:relative;height:200px"><canvas id="chartValReal"></canvas></div>
-    </div>
-
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.4rem;margin-bottom:1.2rem;border-top:3px solid var(--purple)">
-      <div style="font-family:'Syne',sans-serif;font-size:14px;font-weight:700;margin-bottom:.3rem">🧮 Simulador de Campanha — WhatsApp</div>
-      <div style="font-size:12px;color:var(--muted);margin-bottom:1.2rem">Simule entrega, erro e custo com base nas taxas médias reais</div>
-      <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;margin-bottom:1.2rem">
-        <div style="display:flex;flex-direction:column;gap:.3rem">
-          <label style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Leads na Campanha</label>
-          <input type="number" id="simLeads" value="500" min="1" max="100000" oninput="updateSimulator()"
-            style="background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:'DM Sans',sans-serif;font-size:22px;font-weight:700;padding:.5rem .8rem;border-radius:8px;width:160px;outline:none"/>
-        </div>
-        <div style="display:flex;flex-direction:column;gap:.3rem">
-          <label style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">% Entrega Mínima</label>
-          <input type="number" id="simTaxaMin" value="${Math.max(60,(mediaEntrega-8).toFixed(1))}" min="1" max="100" step="0.1" oninput="updateSimulator()"
-            style="background:var(--surface2);border:1px solid var(--border);color:#FF4040;font-family:'DM Sans',sans-serif;font-size:22px;font-weight:700;padding:.5rem .8rem;border-radius:8px;width:120px;outline:none"/>
-        </div>
-        <div style="display:flex;flex-direction:column;gap:.3rem">
-          <label style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">% Entrega Máxima</label>
-          <input type="number" id="simTaxaMax" value="${Math.min(100,(mediaEntrega+8).toFixed(1))}" min="1" max="100" step="0.1" oninput="updateSimulator()"
-            style="background:var(--surface2);border:1px solid var(--border);color:var(--green);font-family:'DM Sans',sans-serif;font-size:22px;font-weight:700;padding:.5rem .8rem;border-radius:8px;width:120px;outline:none"/>
-        </div>
-        <div style="display:flex;flex-direction:column;gap:.3rem">
-          <label style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Campanhas no Mês</label>
-          <input type="number" id="simCamps" value="22" min="1" max="60" oninput="updateSimulator()"
-            style="background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:'DM Sans',sans-serif;font-size:22px;font-weight:700;padding:.5rem .8rem;border-radius:8px;width:120px;outline:none"/>
-        </div>
-        <div style="margin-top:1.2rem">
-          <button onclick="updateSimulator()" style="background:var(--purple);color:white;border:none;padding:.6rem 1.2rem;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer">▶ Simular</button>
-        </div>
-      </div>
-      <div id="simCards" style="display:grid;grid-template-columns:repeat(4,1fr);gap:.7rem;margin-bottom:1.2rem"></div>
-      <div style="position:relative;height:220px"><canvas id="chartSimulador"></canvas></div>
-    </div>
-
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1.2rem;margin-bottom:2rem">
-      <div style="font-family:'Syne',sans-serif;font-size:13px;font-weight:700;margin-bottom:1rem;color:var(--text)">💸 Valor Dia — Total investido por dia (WhatsApp)</div>
-      <div style="position:relative;height:180px"><canvas id="chartValDia2"></canvas></div>
-    </div>
-
-    <!-- ══ DIVISOR ══ -->
-    <div style="border-top:2px solid var(--border);margin:1.5rem 0 1.8rem;position:relative">
-      <div style="position:absolute;top:-12px;left:50%;transform:translateX(-50%);background:var(--bg);padding:0 1rem;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em">SMS</div>
-    </div>
-
-    <!-- ══ SMS ══ -->
-    ${smsData.length ? `
-    <div style="display:flex;align-items:center;gap:.6rem;margin-bottom:.5rem">
-      <span style="font-size:18px">📱</span>
-      <div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:700">SMS — Análise Financeira</div>
-    </div>
-    <div class="sec-sub" style="margin-bottom:1rem">Valor por mensagem: R$ 0,07 · 100% entregues · Base: ${smsData.length.toLocaleString('pt-BR')} leads enviados</div>
-
-    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:.8rem;margin-bottom:1.2rem">
-      <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1rem;border-top:2px solid var(--green)">
-        <div style="font-size:9px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:.4rem">Total Investido SMS</div>
-        <div style="font-family:'Syne',sans-serif;font-size:24px;font-weight:700;color:var(--green)">R$ ${(smsData.length * 0.07).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
-        <div style="font-size:11px;color:var(--muted);margin-top:.3rem">${smsData.length.toLocaleString('pt-BR')} mensagens enviadas</div>
-      </div>
-      <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1rem;border-top:2px solid var(--blue)">
-        <div style="font-size:9px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:.4rem">Custo / Mensagem</div>
-        <div style="font-family:'Syne',sans-serif;font-size:24px;font-weight:700;color:var(--blue)">R$ 0,07</div>
-        <div style="font-size:11px;color:var(--muted);margin-top:.3rem">todas as mensagens são cobradas</div>
-      </div>
-    </div>
-
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.4rem;margin-bottom:1.2rem;border-top:3px solid var(--blue)">
-      <div style="font-family:'Syne',sans-serif;font-size:14px;font-weight:700;margin-bottom:.3rem">🧮 Simulador de Campanha — SMS</div>
-      <div style="font-size:12px;color:var(--muted);margin-bottom:1.2rem">Simule o custo de campanhas SMS (100% entregues, R$ 0,07/msg)</div>
-      <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;margin-bottom:1.2rem">
-        <div style="display:flex;flex-direction:column;gap:.3rem">
-          <label style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Leads na Campanha</label>
-          <input type="number" id="simSmsLeads" value="500" min="1" max="100000" oninput="updateSimulatorSms()"
-            style="background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:'DM Sans',sans-serif;font-size:22px;font-weight:700;padding:.5rem .8rem;border-radius:8px;width:160px;outline:none"/>
-        </div>
-        <div style="display:flex;flex-direction:column;gap:.3rem">
-          <label style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Campanhas no Mês</label>
-          <input type="number" id="simSmsCamps" value="${getCampaigns(smsData).length||5}" min="1" max="60" oninput="updateSimulatorSms()"
-            style="background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:'DM Sans',sans-serif;font-size:22px;font-weight:700;padding:.5rem .8rem;border-radius:8px;width:120px;outline:none"/>
-        </div>
-        <div style="margin-top:1.2rem">
-          <button onclick="updateSimulatorSms()" style="background:var(--blue);color:white;border:none;padding:.6rem 1.2rem;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer">▶ Simular</button>
-        </div>
-      </div>
-      <div id="simSmsCards" style="display:grid;grid-template-columns:repeat(3,1fr);gap:.7rem;margin-bottom:1.2rem"></div>
-      <div style="position:relative;height:200px"><canvas id="chartSimuladorSms"></canvas></div>
-    </div>
-
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1.2rem;margin-bottom:1.5rem">
-      <div style="font-family:'Syne',sans-serif;font-size:13px;font-weight:700;margin-bottom:1rem;color:var(--text)">💸 Valor Dia — Total investido por dia (SMS)</div>
-      <div style="position:relative;height:180px"><canvas id="chartValDiaSms"></canvas></div>
-    </div>
-    ` : `
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:2rem;text-align:center;margin-bottom:1.5rem">
-      <div style="font-size:28px;margin-bottom:.8rem">📱</div>
-      <div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;margin-bottom:.5rem">Dados SMS não configurados</div>
-      <div style="font-size:13px;color:var(--muted)">Configure a URL da aba SMS em <strong>⚙️ Configurar</strong> para ver a análise financeira do SMS.</div>
-    </div>
-    `}`;
-
-  setTimeout(() => {
-    renderChartValReal(daily);
-    updateSimulator();
-    renderChartValDia(daily);
-    if (smsData.length) {
-      updateSimulatorSms();
-      renderChartValDiaSms();
-    }
-    updateSimulatorConsolidado();
-  }, 80);
+  `;
 }
-
-function renderChartValReal(daily) {
-  const ctx = document.getElementById('chartValReal');
-  if (!ctx) return;
-  if (window._chartValReal) window._chartValReal.destroy();
-  window._chartValReal = new Chart(ctx, {
-    type: 'line',
-    data: {
-      labels: daily.map(d => d.label),
-      datasets: [
-        {
-          label: '% Entrega',
-          data: daily.map(d => parseFloat(d.pok.toFixed(1))),
-          borderColor: '#00C97A', backgroundColor: 'rgba(0,201,122,.07)',
-          pointBackgroundColor: '#00C97A', pointBorderColor: '#0A0A0A',
-          pointRadius: 5, borderWidth: 2.5, tension: 0.35, fill: true, yAxisID: 'y'
-        },
-        {
-          label: '% Erro',
-          data: daily.map(d => parseFloat(d.perr.toFixed(1))),
-          borderColor: '#FF4040', backgroundColor: 'rgba(255,64,64,.06)',
-          pointBackgroundColor: '#FF4040', pointBorderColor: '#0A0A0A',
-          pointRadius: 5, borderWidth: 2, tension: 0.35, fill: true, yAxisID: 'y'
-        }
-      ]
-    },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      plugins: {
-        legend: { labels: { color: '#777', font: { size: 11 }, boxWidth: 14 } },
-        tooltip: {
-          backgroundColor: '#1C1C1C', borderColor: '#2A2A2A', borderWidth: 1,
-          titleColor: '#F0F0F0', bodyColor: '#aaa',
-          callbacks: { label: ctx => ` ${ctx.dataset.label}: ${ctx.raw}%` }
-        }
-      },
-      scales: {
-        x: { ticks: { color: '#555', font: { size: 10 } }, grid: { color: '#1A1A1A' } },
-        y: { ticks: { color: '#555', font: { size: 10 }, callback: v => v + '%' }, grid: { color: '#1E1E1E' }, min: 0, max: 100 }
-      }
-    }
-  });
-}
-
-function renderChartValDia(daily) {
-  const CUSTO = 0.43;
-  const ctx = document.getElementById('chartValDia2');
-  if (!ctx) return;
-  if (window._chartValDia2) window._chartValDia2.destroy();
-  window._chartValDia2 = new Chart(ctx, {
-    type: 'line',
-    data: {
-      labels: daily.map(d => d.label),
-      datasets: [{
-        label: 'Valor Dia (R$)',
-        data: daily.map(d => parseFloat((d.entregues * CUSTO).toFixed(2))),
-        borderColor: '#A78BFA', backgroundColor: 'rgba(167,139,250,.08)',
-        pointBackgroundColor: '#A78BFA', pointBorderColor: '#0A0A0A',
-        pointRadius: 5, borderWidth: 2.5, tension: 0.4, fill: true
-      }]
-    },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      plugins: {
-        legend: { labels: { color: '#777', font: { size: 11 } } },
-        tooltip: {
-          backgroundColor: '#1C1C1C', borderColor: '#2A2A2A', borderWidth: 1,
-          titleColor: '#F0F0F0', bodyColor: '#aaa',
-          callbacks: { label: ctx => ` R$ ${ctx.raw.toLocaleString('pt-BR', {minimumFractionDigits:2})}` }
-        }
-      },
-      scales: {
-        x: { ticks: { color: '#555', font: { size: 10 } }, grid: { color: '#1A1A1A' } },
-        y: { ticks: { color: '#555', font: { size: 10 }, callback: v => 'R$'+v }, grid: { color: '#1E1E1E' } }
-      }
-    }
-  });
-}
-
-function updateSimulator() {
-  const leads = parseInt(document.getElementById('simLeads')?.value) || 500;
-  const taxaMin = parseFloat(document.getElementById('simTaxaMin')?.value) || 70;
-  const taxaMax = parseFloat(document.getElementById('simTaxaMax')?.value) || 90;
-  const numCamps = parseInt(document.getElementById('simCamps')?.value) || 22;
-  const CUSTO = 0.43;
-
-  // Valida min <= max
-  const tMin = Math.min(taxaMin, taxaMax);
-  const tMax = Math.max(taxaMin, taxaMax);
-  const taxaMedia = (tMin + tMax) / 2;
-
-  // Gera variação aleatória por campanha dentro do intervalo
-  const labels = Array.from({length: numCamps}, (_,i) => `Camp ${i+1}`);
-  const taxasPorCamp = labels.map(() => tMin + Math.random() * (tMax - tMin));
-  const entreguesPorCamp = taxasPorCamp.map(t => Math.round(leads * t / 100));
-  const errosPorCamp = entreguesPorCamp.map(e => leads - e);
-  const custoPorCamp = entreguesPorCamp.map(e => e * CUSTO);
-
-  // Totais/médias para os cards
-  const totalEntreguesMes = entreguesPorCamp.reduce((a,b) => a+b, 0);
-  const totalErrosMes = errosPorCamp.reduce((a,b) => a+b, 0);
-  const custoMes = custoPorCamp.reduce((a,b) => a+b, 0);
-  const economiaMes = totalErrosMes * CUSTO;
-  const mediaEntregaReal = taxasPorCamp.reduce((a,b) => a+b, 0) / numCamps;
-
-  // Custo acumulado
-  const dataCusto = custoPorCamp.map((_, i) => parseFloat(custoPorCamp.slice(0, i+1).reduce((a,b) => a+b, 0).toFixed(2)));
-
-  // Atualiza cards
-  const cards = document.getElementById('simCards');
-  if (cards) cards.innerHTML = `
-    <div style="background:var(--surface2);border-radius:8px;padding:.9rem;border-top:2px solid var(--green)">
-      <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Média Entrega Simulada</div>
-      <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:700;color:var(--green)">${mediaEntregaReal.toFixed(1)}%</div>
-      <div style="font-size:11px;color:var(--muted);margin-top:2px">variação ${tMin.toFixed(0)}%–${tMax.toFixed(0)}%</div>
-    </div>
-    <div style="background:var(--surface2);border-radius:8px;padding:.9rem;border-top:2px solid #FF4040">
-      <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Total Erros no Mês</div>
-      <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:700;color:#FF4040">${totalErrosMes.toLocaleString('pt-BR')}</div>
-      <div style="font-size:11px;color:var(--muted);margin-top:2px">economia R$ ${economiaMes.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
-    </div>
-    <div style="background:var(--surface2);border-radius:8px;padding:.9rem;border-top:2px solid var(--blue)">
-      <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Total Entregues no Mês</div>
-      <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:700;color:var(--blue)">${totalEntreguesMes.toLocaleString('pt-BR')}</div>
-      <div style="font-size:11px;color:var(--muted);margin-top:2px">${numCamps} campanhas × ~${Math.round(totalEntreguesMes/numCamps).toLocaleString('pt-BR')}</div>
-    </div>
-    <div style="background:var(--surface2);border-radius:8px;padding:.9rem;border-top:2px solid var(--purple)">
-      <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Projeção Mensal (${numCamps} camps.)</div>
-      <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:700;color:var(--purple)">R$ ${custoMes.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
-      <div style="font-size:11px;color:var(--muted);margin-top:2px">economia R$ ${economiaMes.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
-    </div>`;
-
-  const dataEntrega = entreguesPorCamp;
-  const dataErro = errosPorCamp;
-
-  const ctx = document.getElementById('chartSimulador');
-  if (!ctx) return;
-  if (window._chartSim) window._chartSim.destroy();
-  window._chartSim = new Chart(ctx, {
-    type: 'bar',
-    data: {
-      labels,
-      datasets: [
-        {
-          label: 'Entregues',
-          data: dataEntrega,
-          backgroundColor: 'rgba(0,201,122,.7)',
-          borderColor: '#00C97A', borderWidth: 1, yAxisID: 'y'
-        },
-        {
-          label: 'Erros',
-          data: dataErro,
-          backgroundColor: 'rgba(255,64,64,.6)',
-          borderColor: '#FF4040', borderWidth: 1, yAxisID: 'y'
-        },
-        {
-          label: 'Custo Acumulado (R$)',
-          data: dataCusto,
-          type: 'line',
-          borderColor: '#A78BFA', backgroundColor: 'transparent',
-          pointRadius: numCamps <= 10 ? 5 : 3,
-          borderWidth: 2.5, tension: 0.1, yAxisID: 'y2'
-        }
-      ]
-    },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      plugins: {
-        legend: { labels: { color: '#777', font: { size: 11 }, boxWidth: 14 } },
-        tooltip: {
-          backgroundColor: '#1C1C1C', borderColor: '#2A2A2A', borderWidth: 1,
-          titleColor: '#F0F0F0', bodyColor: '#aaa',
-          callbacks: {
-            label: ctx => ctx.dataset.yAxisID === 'y2'
-              ? ` Custo acumulado: R$ ${ctx.raw.toLocaleString('pt-BR',{minimumFractionDigits:2})}`
-              : ` ${ctx.dataset.label}: ${ctx.raw.toLocaleString('pt-BR')}`
-          }
-        }
-      },
-      scales: {
-        x: { ticks: { color: '#555', font: { size: numCamps > 15 ? 9 : 10 }, maxRotation: 45 }, grid: { color: '#1A1A1A' }, stacked: true },
-        y: { stacked: true, ticks: { color: '#555', font: { size: 10 } }, grid: { color: '#1E1E1E' }, title: { display: true, text: 'Leads', color: '#555', font: { size: 10 } } },
-        y2: { position: 'right', ticks: { color: '#A78BFA', font: { size: 10 }, callback: v => 'R$' + v.toLocaleString('pt-BR') }, grid: { display: false }, title: { display: true, text: 'Custo Acum.', color: '#A78BFA', font: { size: 10 } } }
-      }
-    }
-  });
-}
-
-function updateSimulatorConsolidado() {
-  const el = document.getElementById('simConsolidadoCards');
-  if (!el) return;
-
-  // Read simulated values from the individual simulators
-  const wppLeads   = parseInt(document.getElementById('simLeads')?.value) || 0;
-  const wppCamps   = parseInt(document.getElementById('simCamps')?.value) || 0;
-  const wppMin     = parseFloat(document.getElementById('simTaxaMin')?.value) || 0;
-  const wppMax     = parseFloat(document.getElementById('simTaxaMax')?.value) || 0;
-  const wppMedia   = (wppMin + wppMax) / 2 / 100;
-  const wppTotal   = wppLeads * wppCamps;
-  const wppEntregues = Math.round(wppTotal * wppMedia);
-  const simWpp     = wppEntregues * 0.43;
-
-  const smsLeads   = parseInt(document.getElementById('simSmsLeads')?.value) || 0;
-  const smsCamps   = parseInt(document.getElementById('simSmsCamps')?.value) || 0;
-  const simSms     = smsLeads * smsCamps * 0.07;
-
-  // Voz: se tiver simulador no futuro, usar — por ora usa vozData real
-  const simVoz     = vozData.length ? vozEntreguesGlobal * 0.15 : 0;
-
-  const simTotal   = simWpp + simSms + simVoz;
-
-  el.innerHTML = `
-    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:.9rem;border-top:2px solid var(--green)">
-      <div style="font-size:9px;text-transform:uppercase;color:var(--muted);margin-bottom:.4rem">💬 Simulado WhatsApp</div>
-      <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:700;color:var(--green)">R$ ${simWpp.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
-      <div style="font-size:10px;color:var(--muted);margin-top:.2rem">${wppEntregues.toLocaleString('pt-BR')} entregues × R$ 0,43</div>
-    </div>
-    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:.9rem;border-top:2px solid var(--blue)">
-      <div style="font-size:9px;text-transform:uppercase;color:var(--muted);margin-bottom:.4rem">📱 Simulado SMS</div>
-      <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:700;color:var(--blue)">R$ ${simSms.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
-      <div style="font-size:10px;color:var(--muted);margin-top:.2rem">${(smsLeads*smsCamps).toLocaleString('pt-BR')} msgs × R$ 0,07</div>
-    </div>
-    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:.9rem;border-top:2px solid var(--purple)">
-      <div style="font-size:9px;text-transform:uppercase;color:var(--muted);margin-bottom:.4rem">🎙️ Simulado Voz</div>
-      ${vozData.length
-        ? `<div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:700;color:var(--purple)">R$ ${simVoz.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
-           <div style="font-size:10px;color:var(--muted);margin-top:.2rem">dados reais</div>`
-        : `<div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:600;color:var(--muted)">—</div>
-           <div style="font-size:10px;color:var(--border);margin-top:.2rem">sem dados ainda</div>`}
-    </div>
-    <div style="background:var(--surface2);border:2px solid var(--amber);border-radius:8px;padding:.9rem">
-      <div style="font-size:9px;text-transform:uppercase;color:var(--muted);margin-bottom:.4rem">💰 Total Simulado Mês</div>
-      <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:700;color:var(--amber)">R$ ${simTotal.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
-      <div style="font-size:10px;color:var(--muted);margin-top:.2rem">soma dos 3 canais</div>
-    </div>`;
-  setTimeout(updateSimulatorConsolidado, 50);
-}function updateSimulatorSms() {
-  const leads   = parseInt(document.getElementById('simSmsLeads')?.value) || 500;
-  const nCamps  = parseInt(document.getElementById('simSmsCamps')?.value) || 5;
-  const CUSTO   = 0.07;
-  // SMS = 100% entregue, sem erro
-  const totalEntregues = leads * nCamps;
-  const totalCusto = totalEntregues * CUSTO;
-  const mediaCusto = leads * CUSTO;
-
-  // Cards
-  const cardsEl = document.getElementById('simSmsCards');
-  if (cardsEl) cardsEl.innerHTML = `
-    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:.8rem">
-      <div style="font-size:9px;text-transform:uppercase;color:var(--muted);margin-bottom:.3rem">Total Enviados no Mês</div>
-      <div style="font-family:'Syne',sans-serif;font-size:22px;font-weight:700;color:var(--green)">${totalEntregues.toLocaleString('pt-BR')}</div>
-      <div style="font-size:10px;color:var(--muted)">${nCamps} campanhas × ${leads}</div>
-    </div>
-    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:.8rem">
-      <div style="font-size:9px;text-transform:uppercase;color:var(--muted);margin-bottom:.3rem">Custo por Campanha</div>
-      <div style="font-family:'Syne',sans-serif;font-size:22px;font-weight:700;color:var(--blue)">R$ ${mediaCusto.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
-      <div style="font-size:10px;color:var(--muted)">${leads} leads × R$ 0,07</div>
-    </div>
-    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:.8rem">
-      <div style="font-size:9px;text-transform:uppercase;color:var(--muted);margin-bottom:.3rem">Projeção Mensal</div>
-      <div style="font-family:'Syne',sans-serif;font-size:22px;font-weight:700;color:var(--purple)">R$ ${totalCusto.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
-      <div style="font-size:10px;color:var(--muted)">${nCamps} campanhas no mês</div>
-    </div>`;
-
-  // Gráfico barras SMS (todas verdes - sem erro)
-  const ctx = document.getElementById('chartSimuladorSms');
-  if (!ctx) return;
-  if (window._chartSimSms) window._chartSimSms.destroy();
-  const labels = Array.from({length:nCamps},(_,i)=>`Camp ${i+1}`);
-  const entregues = labels.map(()=>leads);
-  const custoAcum = labels.map((_,i)=>(i+1)*leads*CUSTO);
-
-  window._chartSimSms = new Chart(ctx, {
-    type: 'bar',
-    data: {
-      labels,
-      datasets: [
-        { label:'Enviados', data:entregues, backgroundColor:'rgba(0,201,122,.7)', borderRadius:3, yAxisID:'y' },
-        { label:'Custo Acumulado (R$)', data:custoAcum, type:'line', borderColor:'#A78BFA',
-          backgroundColor:'rgba(167,139,250,.1)', pointBackgroundColor:'#A78BFA',
-          pointRadius:3, borderWidth:2, tension:.35, fill:false, yAxisID:'y2' }
-      ]
-    },
-    options: {
-      responsive:true, maintainAspectRatio:false,
-      plugins:{ legend:{ labels:{ color:'#777', font:{size:11}, boxWidth:14 } }, tooltip:{ backgroundColor:'#1C1C1C', borderColor:'#2A2A2A', borderWidth:1, titleColor:'#F0F0F0', bodyColor:'#AAA' } },
-      scales:{
-        x:{ ticks:{color:'#555',font:{size:10}}, grid:{color:'rgba(255,255,255,.04)'} },
-        y:{ position:'left', ticks:{color:'#555',font:{size:10}}, grid:{color:'rgba(255,255,255,.04)'}, title:{display:true,text:'Leads',color:'#555',font:{size:10}} },
-        y2:{ position:'right', ticks:{color:'var(--blue)',font:{size:10},callback:v=>'R$'+v.toLocaleString('pt-BR')}, grid:{display:false}, title:{display:true,text:'Custo Acum.',color:'var(--blue)',font:{size:10}} }
-      }
-    }
-  });
-  setTimeout(updateSimulatorConsolidado, 50);
-}function renderChartValDiaSms() {
-  const ctx = document.getElementById('chartValDiaSms');
-  if (!ctx || !smsData.length) return;
-  if (window._chartValDiaSms) window._chartValDiaSms.destroy();
-  const daily = getDailyData(smsData);
-  const CUSTO = 0.07;
-  window._chartValDiaSms = new Chart(ctx, {
-    type: 'line',
-    data: {
-      labels: daily.map(d=>d.label),
-      datasets: [{
-        label: 'Valor Dia (R$)',
-        data: daily.map(d => parseFloat((d.total * CUSTO).toFixed(2))),
-        borderColor: '#A78BFA', backgroundColor: 'rgba(167,139,250,.08)',
-        pointBackgroundColor:'#A78BFA', pointBorderColor:'#0A0A0A',
-        pointRadius:5, borderWidth:2.5, tension:.35, fill:true
-      }]
-    },
-    options:{
-      responsive:true, maintainAspectRatio:false,
-      plugins:{ legend:{ labels:{color:'#777',font:{size:11},boxWidth:14} }, tooltip:{backgroundColor:'#1C1C1C',borderColor:'#2A2A2A',borderWidth:1,titleColor:'#F0F0F0',bodyColor:'#AAA',callbacks:{label:ctx=>'R$ '+ctx.parsed.y.toLocaleString('pt-BR',{minimumFractionDigits:2})}} },
-      scales:{
-        x:{ ticks:{color:'#555',font:{size:10}}, grid:{color:'rgba(255,255,255,.04)'} },
-        y:{ ticks:{color:'#555',font:{size:10},callback:v=>'R$'+v.toLocaleString('pt-BR')}, grid:{color:'rgba(255,255,255,.05)'} }
-      }
-    }
-  });
-}
-
 
 function renderGeralError(msg) {
   document.getElementById('geralContent').innerHTML=`
@@ -1681,6 +1307,7 @@ function show(id,tab) {
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   document.getElementById(id).classList.add('active');
   tab.classList.add('active');
+  if (id === 'campanhas' && allData.length) renderCampCards();
   if (id === 'valores' && allData.length) renderValores();
 }
 

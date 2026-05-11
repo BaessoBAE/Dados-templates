@@ -1,118 +1,3 @@
-
-Claude terminou a resposta
-Você disse: Claude preciso que adicione o mês de maio seguindo as regras que que ja tem dos outros meses
-
-index (19).html
-html
-
-Claude preciso que adicione o mês de maio seguindo as regras que que ja tem dos outros meses
-
-09:10
-Claude respondeu: Agora tenho uma visão completa do arquivo.
-
-Visualizou 4 arquivos
-Visualizou 4 arquivos
-Agora tenho uma visão completa do arquivo. Vou adicionar maio seguindo todas as regras dos outros meses:
-
-Tab nav — adicionar botão "Projeção Maio"
-Aba Evolução — adicionar botão "Maio" no seletor de meses
-Aba Custos — adicionar card KPI de Custo Maio
-Nova aba de Projeção Maio com estrutura idêntica à de Março
-Dados fallback — adicionar maio no monthly, daily, weekly e mesMap
-mNm — adicionar mai: 'Maio'
-renderProjecao — criar função equivalente para maio
-
-Editou 10 arquivos, executou um comando
-Editou 10 arquivos, executou um comando
-Now add the renderProjecaoMaio function and call it in renderAll:
-
-
-Editou 3 arquivos, visualizou 2 arquivos
-Editou 3 arquivos, visualizou 2 arquivos
-O arquivo está correto — o setKPI já foi incluído como parte do bloco que adicionei. Vejo que a função está completa. Agora vou copiar para o output:
-
-
-Executou um comando, leu um arquivo
-Executou um comando, leu um arquivo
-Maio adicionado! Aqui está o que foi feito seguindo todas as regras dos meses anteriores:
-
-Navegação
-
-Nova aba "Projeção Maio" no tab nav
-Aba Evolução
-
-Botões "Abril" e "Maio" no seletor de meses (para filtrar os gráficos diários)
-Aba Custos
-
-Cards KPI de "Custo Abril" e "Custo Maio" com os mesmos IDs dinâmicos (kpi-custo-3, kpi-custo-4) que são preenchidos automaticamente pelos dados
-Aba Projeção Maio (nova, idêntica à de Março)
-
-6 cards KPI (tarifa, taxa de envio, custo/dia, dias úteis, realizado, total projetado)
-Gráfico de barras Realizado vs Projeção diário
-Gráfico de linha acumulada com bridge real→projetado
-Gráfico de barras por semana (4 semanas úteis de maio)
-Tabela detalhada dia a dia com status realizado/projeção
-Dados
-
-mesMap atualizado com abril e maio
-mNm atualizado com abr e mai
-Fallback com dados de Abril e Maio nos arrays monthly, daily e weekly
-Dias úteis de maio: 04/05 a 30/05 (20 dias úteis, excluindo feriados)
-
-Index
-Código · HTML 
-Você disse: Foi mal claude eu errei o index é esse aqui
-
-index (20).html
-html
-
-Foi mal claude eu errei o index é esse aqui
-
-09:40
-Claude respondeu: Agora tenho tudo que preciso.
-
-Visualizou 6 arquivos
-Visualizou 6 arquivos
-Agora tenho tudo que preciso. Esse dashboard é diferente — ele lê os dados dinamicamente da planilha Google Sheets via Apps Script, e os meses são detectados automaticamente pelo sufixo numérico do nome das campanhas (ex: ...0305 = dia 03, mês 05).
-
-Preciso adicionar Maio (05) nos seguintes lugares:
-
-renderMonthFilterBar — filtro de mês na Visão Geral
-renderValoresFilterBar — filtro de mês em Valores
-renderCampCards — card de mês na aba Campanhas (com classe CSS e cor)
-renderMonthCampaigns — nome do mês no detalhe
-CSS — adicionar classe .month-card.may com cor
-
-Editou 7 arquivos, executou 2 comandos, leu um arquivo
-Editou 7 arquivos, executou 2 comandos, leu um arquivo
-Feito! Aqui está o que foi adicionado seguindo exatamente o mesmo padrão dos outros meses:
-
-CSS
-
-Classe .month-card.may::before com cor âmbar (mesma lógica do verde de Março e azul de Abril)
-Classe .month-card.active.may com fundo âmbar suave
-Grid do seletor de meses ajustado para 3 colunas (repeat(3,1fr))
-Filtro Visão Geral — botão "Maio (05)" adicionado ao renderMonthFilterBar
-
-Filtro Valores — botão "Maio (05)" adicionado ao renderValoresFilterBar
-
-Aba Campanhas — card "Maio (05)" com classe may e a contagem dinâmica de campanhas/leads lida direto dos dados da planilha
-
-Detalhe de campanhas — renderMonthCampaigns já resolve corretamente o nome "Maio" ao selecionar 05
-
-Como o dashboard lê os dados do Google Sheets via Apps Script, assim que as campanhas de maio forem inseridas na planilha com o sufixo 05 no nome (ex: Campanha Manhã 03/05), elas aparecerão automaticamente em todos os filtros.
-
-
-Index20
-Código · HTML 
-
-
-
-
-Claude é uma IA e pode cometer erros. Por favor, verifique as respostas.
-Index20 · HTML
-Copiar
-
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -246,7 +131,7 @@ Copiar
 </style>
 </head>
 <body>
- 
+
 <header>
   <div class="logo">
     <div class="logo-icon">PJ</div>
@@ -258,7 +143,7 @@ Copiar
     <button class="refresh-btn" onclick="loadData()">↻ Atualizar</button>
   </div>
 </header>
- 
+
 <div class="tabs">
   <div class="tab active" onclick="show('geral',this)">📊 Visão Geral</div>
   <div class="tab" onclick="show('campanhas',this)">📅 Campanhas</div>
@@ -266,19 +151,19 @@ Copiar
   <div class="tab" onclick="show('valores',this)">💰 Valores</div>
   <div class="tab" onclick="show('config',this)">⚙️ Configurar</div>
 </div>
- 
+
 <div id="geral" class="panel active content">
   <div class="filter-bar" id="geralFilterBar" style="margin-bottom:1.5rem"></div>
   <div id="geralContent"><div class="loading"><div class="spinner"></div><div class="loading-text">Buscando dados...</div><div class="loading-sub">Isso pode levar alguns segundos</div></div></div>
 </div>
- 
+
 <div id="campanhas" class="panel content">
   <div class="sec-title">Campanhas</div>
   <div class="sec-sub">Selecione um mês para ver as campanhas</div>
   <div id="monthSelector" class="month-selector"></div>
   <div id="campDetail"></div>
 </div>
- 
+
 <div id="templates" class="panel content">
   <div class="sec-title">Ranking de Templates</div>
   <div class="sec-sub">Performance acumulada de todas as campanhas</div>
@@ -292,12 +177,12 @@ Copiar
   </div>
   <div id="templatesContent"></div>
 </div>
- 
+
 <div id="valores" class="panel content">
   <div class="filter-bar" id="valoresFilterBar"></div>
   <div id="valoresContent"><div class="loading"><div class="spinner"></div><div class="loading-text">Carregando análise financeira...</div></div></div>
 </div>
- 
+
 <div id="config" class="panel content">
   <div class="sec-title">⚙️ Configuração</div>
   <div class="sec-sub">URL do CSV da Google Sheets</div>
@@ -332,19 +217,19 @@ Copiar
     <div class="step"><div class="step-num">3</div><div class="step-text">Clique em <strong>↻ Atualizar</strong> no dashboard 🎉</div></div>
   </div>
 </div>
- 
+
 <script>
 const DEFAULT_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQf3O5GB-oOMC0e2vx5ek7S09M8G3YYHI165BvayKNmKT9c0fimdsvrMUnwBKsDoZa7YF6Z35kjg0yc/pub?output=csv';
- 
+
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwptDZmzLkfPhCUpwmh-E6Ifh3LLfyqu3GUG_0Z8yGOntK5udcASCVGHDlDsDa2X3zq4w/exec';
- 
+
 const PROXIES = [
   _url => `${APPS_SCRIPT_URL}?_=${Date.now()}`,
   url => `https://corsproxy.io/?${encodeURIComponent(url)}&_=${Date.now()}`,
   url => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}&_=${Date.now()}`,
   url => url
 ];
- 
+
 let CSV_URL = localStorage.getItem('ak_csv_url') || DEFAULT_CSV;
 let allData = [];
 let smsData = [];
@@ -354,18 +239,18 @@ let selectedCamp = null;
 let currentFilter = 'todos';
 let currentMonthFilter = 'all';
 let selectedMonth = null;
- 
+
 function buildSheetUrl(baseUrl, gid) {
   const base = baseUrl.split('?')[0];
   return base + '?gid=' + gid + '&single=true&output=csv';
 }
 let CSV_URL_SMS = localStorage.getItem('ak_csv_sms') || '';
 let CSV_URL_VOZ = localStorage.getItem('ak_csv_voz') || '';
- 
+
 document.getElementById('csvUrl').value = CSV_URL;
 if (CSV_URL_SMS && document.getElementById('csvUrlSms')) document.getElementById('csvUrlSms').value = CSV_URL_SMS;
 if (CSV_URL_VOZ && document.getElementById('csvUrlVoz')) document.getElementById('csvUrlVoz').value = CSV_URL_VOZ;
- 
+
 function saveConfig() {
   const url = document.getElementById('csvUrl').value.trim();
   if (!url) { note('⚠️ Cole a URL antes de salvar.','var(--amber)'); return; }
@@ -375,7 +260,7 @@ function saveConfig() {
   loadData();
 }
 function note(msg,color){ const n=document.getElementById('configNote'); n.style.color=color||'var(--muted)'; n.textContent=msg; }
- 
+
 function saveConfigSms() {
   const url = document.getElementById('csvUrlSms').value.trim();
   const n = document.getElementById('configNoteSms');
@@ -385,7 +270,7 @@ function saveConfigSms() {
   n.style.color='var(--green)'; n.textContent='✓ URL SMS salva! Carregando...';
   loadChannelData();
 }
- 
+
 function saveConfigVoz() {
   const url = document.getElementById('csvUrlVoz').value.trim();
   const n = document.getElementById('configNoteVoz');
@@ -395,12 +280,12 @@ function saveConfigVoz() {
   n.style.color='var(--green)'; n.textContent='✓ URL Voz salva! Carregando...';
   loadChannelData();
 }
- 
+
 function parseCSV(text) {
   const fixEnc = s => (s||'')
     .replace(/ManhÃ£/g, 'Manhã').replace(/manhÃ£/g, 'manhã')
     .replace(/ManhÃ/g,  'Manhã').replace(/manhÃ/g,  'manhã');
- 
+
   function parseRows(raw) {
     const rows = [];
     let cur = '', inQ = false, row = [];
@@ -422,7 +307,7 @@ function parseCSV(text) {
     if (cur || row.length) { row.push(cur.trim()); rows.push(row); }
     return rows;
   }
- 
+
   const rows = parseRows(text);
   if (rows.length < 2) return [];
   const headers = rows[0];
@@ -432,70 +317,70 @@ function parseCSV(text) {
     return obj;
   }).filter(r => r['Nome da Campanha'] && r['ID do Ticket']);
 }
- 
+
 async function loadData() {
   setStatus('Carregando...', false);
   showLoading();
- 
+
   try {
     let allRows = [];
     let page = 0;
- 
+
     while (true) {
       const url = `${APPS_SCRIPT_URL}?page=${page}&_=${Date.now()}`;
       console.log(`📄 Página ${page}...`);
       setStatus(`Carregando página ${page + 1}...`, false);
- 
+
       const res = await fetch(url, { signal: AbortSignal.timeout(30000), cache: 'no-store' });
       if (!res.ok) throw new Error('HTTP ' + res.status);
       const json = await res.json();
- 
+
       if (json.error) throw new Error(json.error);
       if (!json.rows || !json.rows.length) { console.log('Página vazia, parando.'); break; }
- 
+
       allRows = allRows.concat(json.rows);
       console.log(`✅ Página ${page}: +${json.rows.length} rows | total: ${allRows.length} | hasMore: ${json.hasMore}`);
- 
+
       if (!json.hasMore) break;
       page++;
       if (page > 30) { console.warn('Limite de páginas atingido'); break; }
     }
- 
+
     if (!allRows.length) throw new Error('Nenhum dado encontrado.');
- 
+
     const fixEnc = s => (s||'')
       .replace(/ManhÃ£/g, 'Manhã').replace(/manhÃ£/g, 'manhã')
       .replace(/ManhÃ/g,  'Manhã').replace(/manhÃ/g,  'manhã');
- 
+
     const mapped = allRows.map(r => {
         const obj = {};
         Object.keys(r).forEach(k => { obj[k] = fixEnc(r[k]); });
         return obj;
       });
- 
+
     const semCamp = mapped.filter(r => !r['Nome da Campanha']);
     const semTicket = mapped.filter(r => r['Nome da Campanha'] && !r['ID do Ticket']);
     console.log(`🔍 Filtro: ${mapped.length} total | ${semCamp.length} sem campanha | ${semTicket.length} sem ticket`);
     if (semCamp.length > 0) console.log('Exemplo sem campanha:', JSON.stringify(semCamp[0]));
     if (semTicket.length > 0) console.log('Exemplo sem ticket:', JSON.stringify(semTicket[0]));
- 
+
     allData = mapped.filter(r => r['Nome da Campanha'] && r['ID do Ticket']);
- 
+
     console.log(`📊 Total final: ${allData.length} registros`);
     const campNames = [...new Set(allData.map(r=>r['Nome da Campanha']))].sort();
     console.log('=== CAMPANHAS ===', campNames.length);
     campNames.forEach(n => console.log('  CAMP:', JSON.stringify(n)));
- 
+
     renderAll();
     await loadChannelData();
     setStatus(`Atualizado ✓ — ${allData.length.toLocaleString()} registros WhatsApp`, true);
     return;
- 
+
   } catch(e) {
     console.warn('Apps Script (JSON) falhou:', e.message);
     setStatus('Tentando fallback CSV...', false);
   }
- 
+
   const fallbackProxies = [
     url => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}&_=${Date.now()}`,
     url => `https://corsproxy.io/?${encodeURIComponent(url)}&_=${Date.now()}`,
@@ -516,11 +401,11 @@ async function loadData() {
       return;
     } catch(e) { console.warn(`Fallback ${i+1} falhou:`, e.message); }
   }
- 
+
   setStatus('Erro ao carregar', false);
   renderGeralError('Todos os proxies falharam. Faça Ctrl+Shift+R e tente novamente.');
 }
- 
+
 async function fetchCSV(url, skipAppsScript=false) {
   if (skipAppsScript) {
     const secondary = [
@@ -553,7 +438,7 @@ async function fetchCSV(url, skipAppsScript=false) {
   }
   return null;
 }
- 
+
 async function loadChannelData() {
   if (CSV_URL_SMS) {
     const smsNote = document.getElementById('configNoteSms');
@@ -587,7 +472,7 @@ async function loadChannelData() {
   }
   if (smsData.length || vozData.length) renderGeral();
 }
- 
+
 function showLoading() {
   document.getElementById('geralContent').innerHTML = `
     <div class="loading">
@@ -596,12 +481,12 @@ function showLoading() {
       <div class="loading-sub">Tentando conectar, aguarde</div>
     </div>`;
 }
- 
+
 function setStatus(msg, ok) {
   document.getElementById('statusText').textContent = msg;
   document.getElementById('statusDot').style.background = ok ? 'var(--green)' : 'var(--amber)';
 }
- 
+
 // ── HELPERS ──────────────────────────────────────────────────────
 function pStatus(s) {
   const v = (s||'').toLowerCase().trim();
@@ -614,7 +499,7 @@ function isEng(r) {
   return (r['Engajado']||'').toLowerCase()==='sim' || pStatus(r['Status do Lead'])==='engaged';
 }
 function isSmsRow(r) { return (r['Canal do Lead']||r['Canal do Ticket']||'').toUpperCase()==='SMS'; }
- 
+
 function calcStats(rows) {
   const total     = rows.length;
   const entregues = rows.filter(r=>{
@@ -628,13 +513,13 @@ function calcStats(rows) {
     peng: total?(engajados/total*100):0,
     perr: total?(erros/total*100):0 };
 }
- 
+
 function getMonthFromCamp(campName) {
   const m = campName.match(/(\d{4})\s*$/);
   if (!m) return null;
   return m[1].slice(2,4);
 }
- 
+
 function getCampaigns(data) {
   const src = data || allData;
   const map={};
@@ -649,11 +534,11 @@ function getCampaigns(data) {
     return toNum(a.name) - toNum(b.name);
   });
 }
- 
+
 function getCampaignsByMonth(month) {
   return getCampaigns().filter(c => getMonthFromCamp(c.name) === month);
 }
- 
+
 function getTmplRank(data) {
   const src = data || allData;
   const map={};
@@ -676,7 +561,7 @@ function confLabel(rodadas) {
   if(rodadas>=2) return {label:'Média', color:'var(--amber)'};
   return {label:'Baixa', color:'var(--muted)'};
 }
- 
+
 // ── RENDERS ──────────────────────────────────────────────────────
 function renderAll() {
   try { renderGeral(); } catch(e) { console.error('renderGeral:', e); }
@@ -684,7 +569,7 @@ function renderAll() {
   try { renderTemplates(); } catch(e) { console.error('renderTemplates:', e); }
   try { renderValores(); } catch(e) { console.error('renderValores:', e); document.getElementById('valoresContent').innerHTML='<div class="loading"><div class="loading-text">Erro: '+e.message+'</div></div>'; }
 }
- 
+
 function normalizeCampName(str) {
   return (str || '')
     .toLowerCase()
@@ -692,18 +577,18 @@ function normalizeCampName(str) {
     .replace(/[\u0300-\u036f]/g, '')
     .replace(/[^\x00-\x7F]/g, 'a');
 }
- 
+
 function getCampHorario(camp) {
   const name = normalizeCampName(camp.name || '');
   if (name.includes('manh')) return 'manha';
   if (name.includes('tarde')) return 'tarde';
   return 'outro';
 }
- 
+
 function getCampHorarioLabel(camp) {
   return getCampHorario(camp) === 'manha' ? 'Manhã' : getCampHorario(camp) === 'tarde' ? 'Tarde' : '';
 }
- 
+
 function getCampHorarioTime(camp) {
   const row = camp.rows.find(r => r['Data de Criação do Ticket'] && r['Data de Criação do Ticket'].includes(':'));
   if (!row) return '';
@@ -711,7 +596,7 @@ function getCampHorarioTime(camp) {
   const match = raw.match(/(\d{2}:\d{2})/);
   return match ? match[1] : '';
 }
- 
+
 function getTodayCampaigns(data) {
   const camps = getCampaigns(data);
   const lastKey = (() => {
@@ -730,7 +615,7 @@ function getTodayCampaigns(data) {
     tarde: tardes,
   };
 }
- 
+
 function getDailyData(data) {
   const camps = getCampaigns(data);
   const map = {};
@@ -751,7 +636,7 @@ function getDailyData(data) {
       return { label: d.label, ...s };
     });
 }
- 
+
 function renderTodayCard(camp, tipo, idx=0) {
   if (!camp) return '';
   const s = calcStats(camp.rows);
@@ -771,25 +656,25 @@ function renderTodayCard(camp, tipo, idx=0) {
     </div>
   </div>`;
 }
- 
+
 let chartEntrega = null;
 let chartErro = null;
 let chartValDia = null;
 let chartValManha = null;
 let chartValTarde = null;
 let chartProjecao = null;
- 
+
 function getActiveData() {
   if (activeChannel === 'sms') return smsData;
   if (activeChannel === 'voz') return vozData;
   return allData;
 }
- 
+
 function renderChannelCards() {
   const wStats = allData.length ? calcStats(allData) : null;
   const sStats = smsData.length ? calcStats(smsData) : null;
   const vStats = vozData.length ? calcStats(vozData) : null;
- 
+
   const card = (id, icon, label, color, stats, active) => `
     <div onclick="switchChannel('${id}')" style="
       flex:1; min-width:180px; cursor:pointer;
@@ -821,19 +706,19 @@ function renderChannelCards() {
         <div style="font-size:10px;color:var(--border);margin-top:.2rem">Configure a URL na aba ⚙️</div>
       `}
     </div>`;
- 
+
   return `<div style="display:flex;gap:.8rem;flex-wrap:wrap;margin-bottom:1.5rem">
     ${card('whatsapp','💬','WhatsApp','var(--green)', wStats, activeChannel==='whatsapp')}
     ${card('sms','📱','SMS','var(--blue)', sStats, activeChannel==='sms')}
     ${card('voz','🎙️','Voz','var(--purple)', vStats, activeChannel==='voz')}
   </div>`;
 }
- 
+
 function switchChannel(ch) {
   activeChannel = ch;
   renderGeral();
 }
- 
+
 function renderMonthFilterBar() {
   const barEl = document.getElementById('geralFilterBar');
   if (!barEl) return;
@@ -845,7 +730,7 @@ function renderMonthFilterBar() {
     <button class="filter-btn ${currentMonthFilter === '05' ? 'active' : ''}" onclick="setMonthFilter('05', this)">Maio (05)</button>
   `;
 }
- 
+
 function renderValoresFilterBar() {
   const barEl = document.getElementById('valoresFilterBar');
   if (!barEl) return;
@@ -857,7 +742,7 @@ function renderValoresFilterBar() {
     <button class="filter-btn ${currentMonthFilter === '05' ? 'active' : ''}" onclick="setMonthFilter('05', this); setTimeout(() => renderValores(), 100)">Maio (05)</button>
   `;
 }
- 
+
 function setMonthFilter(month, btn) {
   currentMonthFilter = month;
   document.querySelectorAll('.filter-btn').forEach(b => {
@@ -868,7 +753,7 @@ function setMonthFilter(month, btn) {
   btn.classList.add('active');
   renderGeral();
 }
- 
+
 function getFilteredData(data) {
   if (currentMonthFilter === 'all') return data;
   const camps = getCampaigns(data);
@@ -877,13 +762,13 @@ function getFilteredData(data) {
   filteredCamps.forEach(c => rows.push(...c.rows));
   return rows;
 }
- 
+
 function renderGeral() {
   const data = getActiveData();
   const el = document.getElementById('geralContent');
- 
+
   renderMonthFilterBar();
- 
+
   if (!data.length) {
     const isEmpty = activeChannel !== 'whatsapp';
     el.innerHTML = renderChannelCards() + (isEmpty
@@ -895,23 +780,23 @@ function renderGeral() {
       : `<div style="padding:2rem;text-align:center;color:var(--muted)">Sem dados WhatsApp.</div>`);
     return;
   }
- 
+
   const filteredData = getFilteredData(data);
   const _orig = allData;
   if (activeChannel !== 'whatsapp') allData = filteredData;
- 
+
   const camps=getCampaigns(filteredData), s=calcStats(filteredData), rank=getTmplRank(filteredData);
   const top3=rank.slice(0,3), bot=rank.filter(t=>t.pok<75).slice(0,3);
   const { manha, tarde } = getTodayCampaigns(filteredData);
   const daily = getDailyData(filteredData);
- 
+
   allData = _orig;
- 
+
   el.innerHTML=`
     ${renderChannelCards()}
     ${renderTodayCard(manha, 'manha')}
     ${Array.isArray(tarde) ? tarde.map((t,i) => renderTodayCard(t, 'tarde', tarde.length > 1 ? i+1 : 0)).join('') : renderTodayCard(tarde, 'tarde')}
- 
+
     <div class="sec-title" style="margin-top:.5rem">${activeChannel==='sms'?'📱 SMS':activeChannel==='voz'?'🎙️ Voz':'💬 WhatsApp'} — Acumulado</div>
     <div class="sec-sub">${camps.length} campanha(s) · ${s.total.toLocaleString()} leads no total</div>
     <div class="metrics">
@@ -921,7 +806,7 @@ function renderGeral() {
       <div class="mc p"><div class="mc-label">Engajamento</div><div class="mc-val">${s.peng.toFixed(1)}%</div><div class="mc-note">${s.engajados.toLocaleString()} engajados</div></div>
       <div class="mc a"><div class="mc-label">Taxa de Erro</div><div class="mc-val">${s.perr.toFixed(1)}%</div><div class="mc-note">${s.erros.toLocaleString()} falhas</div></div>`:''}
     </div>
- 
+
     ${activeChannel!=='sms'?`
     <div class="igrid">
       <div class="icard"><h3><span class="dot dg"></span>Top Templates</h3><ul class="ilist">
@@ -931,7 +816,7 @@ function renderGeral() {
         ${bot.length?bot.map(t=>`<li class="ii crit"><span class="iico">🔴</span><strong>${t.name}</strong> — ${t.pok.toFixed(1)}% entrega · ${t.perr.toFixed(1)}% erro</li>`).join(''):' <li class="ii pos"><span class="iico">✅</span>Todos os templates acima de 80%!</li>'}
       </ul></div>
     </div>`:''}
- 
+
     <div class="table-wrap" style="margin-bottom:1.5rem">
       <div class="table-top"><span class="table-top-title">Resumo por Campanha</span></div>
       <div class="table-scroll"><table>
@@ -946,7 +831,7 @@ function renderGeral() {
         }).join('')}</tbody>
       </table></div>
     </div>
- 
+
     ${activeChannel!=='sms'?`
     <div class="chart-grid">
       <div class="chart-card">
@@ -958,23 +843,23 @@ function renderGeral() {
         <div class="chart-wrap"><canvas id="chartErro"></canvas></div>
       </div>
     </div>`:''}`;
- 
+
   if(activeChannel!=='sms') setTimeout(() => renderCharts(daily), 50);
 }
- 
+
 function renderCharts(daily) {
   const labels    = daily.map(d => d.label);
   const deliveries= daily.map(d => parseFloat(d.pok.toFixed(1)));
   const errors    = daily.map(d => parseFloat(d.perr.toFixed(1)));
   const totals    = daily.map(d => d.total);
- 
+
   if (chartEntrega) chartEntrega.destroy();
   if (chartErro)    chartErro.destroy();
- 
+
   const c1 = document.getElementById('chartEntrega');
   const c2 = document.getElementById('chartErro');
   if (!c1 || !c2) return;
- 
+
   const baseOpts = (dataArr, label, colorFn, afterFn) => ({
     responsive: true,
     maintainAspectRatio: false,
@@ -1001,7 +886,7 @@ function renderCharts(daily) {
       }
     }
   });
- 
+
   chartEntrega = new Chart(c1, {
     type: 'line',
     data: {
@@ -1021,7 +906,7 @@ function renderCharts(daily) {
     },
     options: baseOpts(deliveries, 'de entrega', v=>v, ctx=>`Leads: ${totals[ctx.dataIndex].toLocaleString()}`)
   });
- 
+
   chartErro = new Chart(c2, {
     type: 'line',
     data: {
@@ -1053,16 +938,16 @@ function renderCharts(daily) {
     }
   });
 }
- 
+
 function renderCampCards() {
   const monthSel = document.getElementById('monthSelector');
   if (!monthSel) return;
- 
+
   const camps = getCampaigns();
   const march = getCampaignsByMonth('03');
   const april = getCampaignsByMonth('04');
   const may   = getCampaignsByMonth('05');
- 
+
   monthSel.innerHTML = `
     <div class="month-card march active" onclick="selectMonth('03', this)">
       <div class="month-icon">📅</div>
@@ -1081,20 +966,20 @@ function renderCampCards() {
     </div>
   `;
 }
- 
+
 function selectMonth(month, card) {
   selectedMonth = month;
   document.querySelectorAll('.month-card').forEach(c => c.classList.remove('active'));
   card.classList.add('active');
   renderMonthCampaigns(month);
 }
- 
+
 function renderMonthCampaigns(month) {
   const camps = getCampaignsByMonth(month);
   const detail = document.getElementById('campDetail');
- 
+
   const monthName = month === '03' ? 'Março' : month === '04' ? 'Abril' : 'Maio';
- 
+
   detail.innerHTML = `
     <div style="margin-top:2rem">
       <div class="sec-title">Campanhas de ${monthName}</div>
@@ -1116,17 +1001,17 @@ function renderMonthCampaigns(month) {
     </div>
   `;
 }
- 
+
 function selectCamp(name) {
   selectedCamp = name;
- 
+
   const camp = getCampaigns().find(c=>c.name===name);
   if (!camp) return;
- 
+
   const map={};
   camp.rows.forEach(r=>{ const t=r['Template']; if(!map[t]) map[t]=[]; map[t].push(r); });
   const rows=Object.values(map).map(rs=>{const s=calcStats(rs);return{name:rs[0]['Template'],...s};}).sort((a,b)=>b.pok-a.pok);
- 
+
   const detail = document.getElementById('campDetail');
   const existing = detail.querySelector('.table-wrap');
   
@@ -1147,14 +1032,14 @@ function selectCamp(name) {
           <td style="color:${cEng(r.peng)};font-weight:500">${r.peng.toFixed(1)}%</td>
           <td>${bOk(r.pok)}</td></tr>`).join('')}
         </tbody></table></div></div>`;
- 
+
   if (existing) {
     existing.outerHTML = tableHtml;
   } else {
     detail.innerHTML += tableHtml;
   }
 }
- 
+
 function filterTmpl(f,btn) {
   currentFilter=f;
   document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
@@ -1173,10 +1058,10 @@ function getTmplHistory(name) {
     return { label: `${tipo} ${label}`, campanha: c.name, pok: s.pok, peng: s.peng, perr: s.perr, total: s.total, entregues: s.entregues, engajados: s.engajados };
   }).filter(Boolean);
 }
- 
+
 let chartTmplDetalhe = null;
 let selectedTmpl = null;
- 
+
 function openTmplModal(name) {
   selectedTmpl = name;
   const hist = getTmplHistory(name);
@@ -1184,7 +1069,7 @@ function openTmplModal(name) {
   const t = rank.find(x => x.name === name);
   if (!t) return;
   const conf = confLabel(t.rodadas);
- 
+
   document.getElementById('tmplModalOverlay').style.display = 'flex';
   document.getElementById('tmplModalContent').innerHTML = `
     <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1.2rem;flex-wrap:wrap;gap:.5rem">
@@ -1197,7 +1082,7 @@ function openTmplModal(name) {
         <button onclick="document.getElementById('tmplModalOverlay').style.display='none'" style="background:var(--surface2);border:1px solid var(--border);color:var(--muted);padding:5px 12px;border-radius:8px;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:12px">✕ Fechar</button>
       </div>
     </div>
- 
+
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:.7rem;margin-bottom:1.2rem">
       <div style="background:var(--surface2);border-radius:8px;padding:.8rem;border-top:2px solid var(--green)">
         <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">% Entrega Acum.</div>
@@ -1216,12 +1101,12 @@ function openTmplModal(name) {
         <div style="font-family:'Syne',sans-serif;font-size:22px;font-weight:700;color:#FF4040">${Math.min(...hist.map(h=>h.pok)).toFixed(1)}%</div>
       </div>
     </div>
- 
+
     <div style="background:var(--surface2);border-radius:10px;padding:1.2rem;margin-bottom:1rem">
       <div style="font-family:'Syne',sans-serif;font-size:12px;font-weight:700;margin-bottom:1rem">📈 Evolução por Campanha</div>
       <div style="position:relative;height:200px"><canvas id="chartTmplDetalhe"></canvas></div>
     </div>
- 
+
     <div style="background:var(--surface2);border-radius:10px;padding:1rem">
       <div style="font-family:'Syne',sans-serif;font-size:12px;font-weight:700;margin-bottom:.8rem">📋 Histórico detalhado</div>
       <div style="overflow-x:auto">
@@ -1243,7 +1128,7 @@ function openTmplModal(name) {
         </table>
       </div>
     </div>`;
- 
+
   setTimeout(() => {
     if (chartTmplDetalhe) chartTmplDetalhe.destroy();
     const ctx = document.getElementById('chartTmplDetalhe');
@@ -1290,7 +1175,7 @@ function openTmplModal(name) {
     });
   }, 80);
 }
- 
+
 function renderTemplates() {
   let rank=getTmplRank();
   if (currentFilter==='otimo') rank=rank.filter(t=>t.pok>=90);
@@ -1316,42 +1201,42 @@ function renderTemplates() {
           <td>${bOk(t.pok,t.rodadas)}</td></tr>`;
         }).join('')}
         </tbody></table></div></div>`;
- 
+
   document.querySelectorAll('.tmpl-row').forEach(row => {
     row.addEventListener('click', () => openTmplModal(row.dataset.tmpl));
   });
 }
- 
+
 function renderValores() {
   const el = document.getElementById('valoresContent');
   if (!el) return;
   if (!allData.length) { el.innerHTML='<div class="loading"><div class="loading-text">Sem dados carregados.</div></div>'; return; }
- 
+
   renderValoresFilterBar();
- 
+
   const filteredData = getFilteredData(allData);
   const daily = getDailyData(filteredData);
   const camps = getCampaigns(filteredData);
   const CUSTO = 0.43;
   const CUSTO_SMS = 0.07;
- 
+
   const totalLeads = filteredData.length;
   const totalEntregues = filteredData.filter(r => pStatus(r['Status do Lead']) !== 'error').length;
   const totalErros = totalLeads - totalEntregues;
   const totalGasto = totalEntregues * CUSTO;
   const totalEconomia = totalErros * CUSTO;
- 
+
   const CUSTO_VOZ = 0.15;
   const vozEntregues = vozData.length ? calcStats(vozData).entregues : 0;
   const vozGasto = vozEntregues * CUSTO_VOZ;
- 
+
   const smsGasto = smsData.length * CUSTO_SMS;
   const totalMes = totalGasto + smsGasto + vozGasto;
- 
+
   const taxasEntrega = camps.map(camp => calcStats(camp.rows).pok);
   const mediaEntrega = taxasEntrega.length > 0 ? taxasEntrega.reduce((a,b)=>a+b,0) / taxasEntrega.length : 0;
   const mediaErro = 100 - mediaEntrega;
- 
+
   el.innerHTML = `
     <div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:700;margin-bottom:.3rem">📊 Resumo Consolidado — Período</div>
     <div class="sec-sub" style="margin-bottom:1rem">Investimento real acumulado por canal</div>
@@ -1383,15 +1268,15 @@ function renderValores() {
         <div style="font-size:11px;color:var(--muted);margin-top:.3rem">WPP + SMS${vozData.length?' + Voz':''}</div>
       </div>
     </div>
- 
+
     <div style="border-top:1px solid var(--border);margin:1.5rem 0"></div>
- 
+
     <div style="display:flex;align-items:center;gap:.6rem;margin-bottom:.5rem">
       <span style="font-size:18px">💬</span>
       <div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:700">WhatsApp — Análise Financeira</div>
     </div>
     <div class="sec-sub" style="margin-bottom:1rem">Valor por mensagem: R$ 0,43 · Cobrado somente nas entregues · Base: ${totalLeads.toLocaleString('pt-BR')} leads enviados</div>
- 
+
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:.8rem;margin-bottom:1.2rem">
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1rem;border-top:2px solid var(--green)">
         <div style="font-size:9px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:.4rem">Total Investido</div>
@@ -1416,7 +1301,7 @@ function renderValores() {
     </div>
   `;
 }
- 
+
 function renderGeralError(msg) {
   document.getElementById('geralContent').innerHTML=`
     <div class="error-box"><h3>⚠️ Não foi possível carregar os dados</h3>
@@ -1425,7 +1310,7 @@ function renderGeralError(msg) {
     Se o erro persistir, vá em <strong>⚙️ Configurar</strong> e re-cole a URL da planilha.<br>
     <small style="opacity:.6">Todos os proxies falharam. Faça Ctrl+Shift+R para limpar o cache e tente novamente. ${msg?'Detalhe: '+msg:''}</small></p></div>`;
 }
- 
+
 function show(id,tab) {
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
@@ -1434,10 +1319,10 @@ function show(id,tab) {
   if (id === 'campanhas' && allData.length) renderCampCards();
   if (id === 'valores' && allData.length) renderValores();
 }
- 
+
 loadData();
 </script>
- 
+
 <!-- Template Detail Modal -->
 <div id="tmplModalOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9999;align-items:center;justify-content:center;padding:1rem" onclick="if(event.target===this)this.style.display='none'">
   <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;width:100%;max-width:860px;max-height:90vh;overflow-y:auto;padding:1.5rem;box-shadow:0 20px 60px rgba(0,0,0,.6)">
@@ -1446,6 +1331,3 @@ loadData();
 </div>
 </body>
 </html>
- 
-
-

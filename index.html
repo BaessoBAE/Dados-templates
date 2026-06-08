@@ -4,139 +4,184 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Dashboard Campanhas — Almeida Krüger</title>
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=Fira+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-annotation/3.0.1/chartjs-plugin-annotation.min.js"></script>
 <style>
-  :root{--red:#EC0000;--bg:#0A0A0A;--surface:#141414;--surface2:#1C1C1C;--border:#2A2A2A;--text:#F0F0F0;--muted:#777;--green:#00C97A;--amber:#F5A623;--blue:#4A9EFF;--purple:#A78BFA;}
+  :root{
+    --red:#F85149;--red-bg:rgba(248,81,73,.08);--red-border:rgba(248,81,73,.3);
+    --bg:#0D1117;--surface:#161B22;--surface2:#21262D;--surface3:#2D333B;
+    --border:#30363D;--border2:#3D444D;
+    --text:#E6EDF3;--muted:#7D8590;--dim:#484F58;
+    --green:#3FB950;--green-bg:rgba(63,185,80,.1);
+    --amber:#D29922;--amber-bg:rgba(210,153,34,.1);
+    --blue:#58A6FF;--blue-bg:rgba(88,166,255,.1);
+    --purple:#BC8CFF;--purple-bg:rgba(188,140,255,.1);
+  }
   *{margin:0;padding:0;box-sizing:border-box}
-  body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
-  header{background:var(--surface);border-bottom:1px solid var(--border);padding:0 2rem;display:flex;align-items:center;justify-content:space-between;height:60px;position:sticky;top:0;z-index:100}
-  .logo{display:flex;align-items:center;gap:10px}
-  .logo-icon{width:34px;height:34px;background:var(--red);border-radius:8px;display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-weight:800;font-size:13px;color:#fff}
-  .logo-text{font-family:'Syne',sans-serif;font-weight:700;font-size:14px}
-  .logo-text span{color:var(--red)}
-  .header-right{display:flex;align-items:center;gap:10px}
-  .status-dot{width:8px;height:8px;border-radius:50%;background:var(--amber);animation:pulse 2s infinite}
-  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
-  .status-text{font-size:11px;color:var(--muted)}
-  .refresh-btn{background:rgba(74,158,255,.12);border:1px solid rgba(74,158,255,.3);color:var(--blue);padding:5px 12px;border-radius:8px;font-size:11px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .2s}
-  .refresh-btn:hover{background:rgba(74,158,255,.2)}
-  .tabs{display:flex;border-bottom:1px solid var(--border);padding:0 2rem;background:var(--surface);overflow-x:auto}
-  .tab{padding:13px 18px;font-size:13px;font-weight:500;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;white-space:nowrap}
-  .tab:hover{color:var(--text)}
-  .tab.active{color:#FF4040;border-bottom-color:var(--red)}
-  .content{padding:2rem;max-width:1180px;margin:0 auto}
+  body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+
+  /* HEADER */
+  header{background:var(--surface);border-bottom:1px solid var(--border);padding:0 28px;display:flex;align-items:center;justify-content:space-between;height:60px;position:sticky;top:0;z-index:100}
+  .logo{display:flex;align-items:center;gap:12px}
+  .logo-icon{width:32px;height:32px;background:var(--red);border-radius:6px;display:flex;align-items:center;justify-content:center;font-family:'Plus Jakarta Sans',sans-serif;font-weight:700;font-size:11px;color:#fff}
+  .logo-text{font-family:'Plus Jakarta Sans',sans-serif;font-weight:600;font-size:14px;color:var(--text)}
+  .logo-text span{color:var(--muted);font-weight:400}
+  .header-right{display:flex;align-items:center;gap:14px}
+  .status-dot{width:7px;height:7px;border-radius:50%;background:var(--amber);box-shadow:0 0 6px var(--amber)}
+  .status-dot.ok{background:var(--green);box-shadow:0 0 6px var(--green)}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+  .status-text{font-size:12px;color:var(--muted)}
+  .refresh-btn{background:var(--surface2);border:1px solid var(--border);color:var(--muted);padding:6px 14px;border-radius:6px;font-size:12px;font-weight:500;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;transition:all .15s}
+  .refresh-btn:hover{border-color:var(--border2);color:var(--text)}
+
+  /* TABS */
+  .tabs{display:flex;border-bottom:1px solid var(--border);padding:0 28px;background:var(--surface);overflow-x:auto;gap:4px}
+  .tab{padding:14px 16px;font-size:13px;font-weight:500;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .2s;white-space:nowrap;border-radius:4px 4px 0 0}
+  .tab:hover{color:var(--text);background:rgba(255,255,255,.03)}
+  .tab.active{color:var(--text);border-bottom-color:var(--red)}
+
+  /* LAYOUT */
+  .content{padding:28px;max-width:1220px;margin:0 auto}
   .panel{display:none}
-  .panel.active{display:block;animation:fadeIn .3s ease}
-  @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+  .panel.active{display:block;animation:fadeIn .25s ease}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+
+  /* LOADING / ERROR */
   .loading{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:5rem;gap:1rem}
-  .spinner{width:40px;height:40px;border:3px solid var(--border);border-top-color:var(--red);border-radius:50%;animation:spin .8s linear infinite}
+  .spinner{width:36px;height:36px;border:2px solid var(--border);border-top-color:var(--red);border-radius:50%;animation:spin .8s linear infinite}
   @keyframes spin{to{transform:rotate(360deg)}}
   .loading-text{color:var(--muted);font-size:14px}
-  .loading-sub{color:var(--muted);font-size:12px;opacity:.6}
-  .error-box{background:rgba(236,0,0,.08);border:1px solid rgba(236,0,0,.3);border-radius:12px;padding:2rem;text-align:center}
-  .error-box h3{color:#FF4040;font-family:'Syne',sans-serif;margin-bottom:.5rem}
+  .loading-sub{color:var(--dim);font-size:12px}
+  .error-box{background:var(--red-bg);border:1px solid var(--red-border);border-radius:10px;padding:2rem;text-align:center}
+  .error-box h3{color:var(--red);font-family:'Plus Jakarta Sans',sans-serif;font-weight:600;margin-bottom:.5rem}
   .error-box p{color:var(--muted);font-size:13px;line-height:1.7}
-  .sec-title{font-family:'Syne',sans-serif;font-size:21px;font-weight:700;margin-bottom:4px}
+
+  /* SECTION TITLES */
+  .sec-title{font-family:'Plus Jakarta Sans',sans-serif;font-size:18px;font-weight:700;margin-bottom:4px;color:var(--text)}
   .sec-sub{color:var(--muted);font-size:13px;margin-bottom:1.5rem}
-  .metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:1.5rem}
-  .mc{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.2rem 1.4rem;position:relative;overflow:hidden}
-  .mc::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
-  .mc.r::before{background:var(--red)}.mc.g::before{background:var(--green)}.mc.a::before{background:var(--amber)}.mc.b::before{background:var(--blue)}.mc.p::before{background:var(--purple)}
-  .mc-label{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:7px}
-  .mc-val{font-family:'Syne',sans-serif;font-size:28px;font-weight:700;line-height:1;margin-bottom:5px}
-  .mc.r .mc-val{color:#FF4040}.mc.g .mc-val{color:var(--green)}.mc.a .mc-val{color:var(--amber)}.mc.b .mc-val{color:var(--blue)}.mc.p .mc-val{color:var(--purple)}
+
+  /* METRIC CARDS */
+  .metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px}
+  .mc{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:18px 20px}
+  .mc-label{font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:8px}
+  .mc-val{font-family:'Fira Mono',monospace;font-size:28px;font-weight:500;line-height:1;margin-bottom:4px}
+  .mc.r .mc-val{color:var(--red)}.mc.g .mc-val{color:var(--green)}.mc.a .mc-val{color:var(--amber)}.mc.b .mc-val{color:var(--blue)}.mc.p .mc-val{color:var(--purple)}
   .mc-note{font-size:11px;color:var(--muted)}
-  .camp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:1rem;margin-bottom:1.5rem}
-  .camp-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.2rem;cursor:pointer;transition:border-color .2s}
-  .camp-card:hover{border-color:rgba(236,0,0,.4)}
-  .camp-card.selected{border-color:var(--red);background:rgba(236,0,0,.05)}
-  .camp-name{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;margin-bottom:3px}
+
+  /* CAMPAIGN CARDS */
+  .camp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;margin-bottom:24px}
+  .camp-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;cursor:pointer;transition:all .2s}
+  .camp-card:hover{border-color:var(--border2);transform:translateY(-1px)}
+  .camp-card.selected{border-color:var(--red);background:var(--red-bg)}
+  .camp-name{font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;font-weight:600;margin-bottom:3px}
   .camp-meta{font-size:11px;color:var(--muted);margin-bottom:12px}
-  .camp-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:.5rem}
-  .cs{text-align:center;padding:.4rem;background:var(--surface2);border-radius:6px}
-  .cs-val{font-family:'Syne',sans-serif;font-size:16px;font-weight:700;line-height:1}
-  .cs-label{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-top:2px}
-  .month-selector{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:2rem;max-width:900px}
-  .month-card{background:var(--surface);border:2px solid var(--border);border-radius:12px;padding:1.5rem;cursor:pointer;transition:all .2s;position:relative;overflow:hidden}
-  .month-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
-  .month-card.march::before{background:var(--green)}.month-card.april::before{background:var(--blue)}.month-card.may::before{background:var(--amber)}.month-card.june::before{background:var(--purple)}
-  .month-card:hover{border-color:rgba(255,255,255,.2);transform:translateY(-2px)}
-  .month-card.active{border-color:var(--text);background:var(--surface2)}
-  .month-card.active.march{border-color:var(--green);background:rgba(0,201,122,.1)}
-  .month-card.active.april{border-color:var(--blue);background:rgba(74,158,255,.1)}
-  .month-card.active.may{border-color:var(--amber);background:rgba(245,166,35,.1)}
-  .month-card.active.june{border-color:var(--purple);background:rgba(167,139,250,.1)}
-  .month-icon{font-size:24px;margin-bottom:.5rem}
-  .month-title{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;margin-bottom:.3rem}
+  .camp-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px}
+  .cs{text-align:center;padding:8px 6px;background:var(--surface2);border-radius:6px}
+  .cs-val{font-family:'Fira Mono',monospace;font-size:15px;font-weight:500;line-height:1}
+  .cs-label{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-top:3px}
+
+  /* MONTH SELECTOR */
+  .month-selector{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px}
+  .month-card{background:var(--surface);border:2px solid var(--border);border-radius:10px;padding:20px;cursor:pointer;transition:all .2s}
+  .month-card:hover{border-color:var(--border2);transform:translateY(-1px)}
+  .month-card.active{border-color:var(--red);background:var(--red-bg)}
+  .month-card.active.march{border-color:var(--green);background:var(--green-bg)}
+  .month-card.active.april{border-color:var(--blue);background:var(--blue-bg)}
+  .month-card.active.may{border-color:var(--amber);background:var(--amber-bg)}
+  .month-card.active.june{border-color:var(--purple);background:var(--purple-bg)}
+  .month-icon{font-size:20px;margin-bottom:8px}
+  .month-title{font-family:'Plus Jakarta Sans',sans-serif;font-size:14px;font-weight:600;margin-bottom:3px}
   .month-sub{font-size:11px;color:var(--muted)}
-  .month-expanded{margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border)}
-  .month-expanded-title{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.8rem;font-weight:600}
-  .filter-bar{display:flex;gap:.6rem;margin-bottom:1.5rem;flex-wrap:wrap;align-items:center}
-  .filter-label{font-size:12px;color:var(--muted)}
-  .filter-btn{padding:5px 13px;border-radius:8px;font-size:12px;font-weight:500;cursor:pointer;border:1px solid var(--border);background:var(--surface2);color:var(--muted);transition:all .2s;font-family:'DM Sans',sans-serif}
-  .filter-btn:hover{color:var(--text)}
-  .filter-btn.active{background:rgba(236,0,0,.15);border-color:rgba(236,0,0,.4);color:#FF4040}
-  .table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:1.5rem}
-  .table-top{padding:.9rem 1.4rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.5rem}
-  .table-top-title{font-family:'Syne',sans-serif;font-size:13px;font-weight:700}
+
+  /* FILTER BAR */
+  .filter-bar{display:flex;gap:6px;margin-bottom:22px;flex-wrap:wrap;align-items:center}
+  .filter-label{font-size:11px;font-weight:600;color:var(--muted)}
+  .filter-btn{padding:5px 13px;border-radius:20px;font-size:11px;font-weight:500;cursor:pointer;border:1px solid var(--border);background:var(--surface2);color:var(--muted);transition:all .15s;font-family:'Plus Jakarta Sans',sans-serif}
+  .filter-btn:hover{color:var(--text);border-color:var(--border2)}
+  .filter-btn.active{background:var(--red-bg);border-color:var(--red-border);color:var(--red)}
+
+  /* TABLES */
+  .table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:24px}
+  .table-top{padding:12px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.5rem}
+  .table-top-title{font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;font-weight:600;color:var(--text)}
   .table-scroll{overflow-x:auto}
   table{width:100%;border-collapse:collapse;min-width:560px}
-  thead th{background:var(--surface2);padding:9px 12px;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);text-align:left;border-bottom:1px solid var(--border)}
+  thead th{background:var(--surface2);padding:10px 20px;font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);text-align:left;border-bottom:1px solid var(--border);font-weight:600}
   tbody tr{border-bottom:1px solid var(--border);transition:background .15s}
   tbody tr:last-child{border-bottom:none}
-  tbody tr:hover{background:var(--surface2)}
-  tbody td{padding:8px 12px;font-size:12.5px}
-  .badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700}
-  .bg{background:rgba(0,201,122,.15);color:var(--green)}
-  .ba{background:rgba(245,166,35,.15);color:var(--amber)}
-  .br{background:rgba(236,0,0,.15);color:#FF4040}
-  .pbar{height:5px;border-radius:3px;background:var(--surface2);margin-top:3px;overflow:hidden}
-  .pfill{height:100%;border-radius:3px}
-  .igrid{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.5rem}
-  .icard{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.4rem}
-  .icard h3{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;margin-bottom:1rem;display:flex;align-items:center;gap:8px}
+  tbody tr:hover{background:rgba(255,255,255,.02)}
+  tbody td{padding:10px 20px;font-size:13px}
+
+  /* BADGES */
+  .badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:600}
+  .bg{background:var(--green-bg);color:var(--green)}
+  .ba{background:var(--amber-bg);color:var(--amber)}
+  .br{background:var(--red-bg);color:var(--red)}
+
+  tfoot tr { background:var(--surface2) }
+  tfoot td { padding:10px 20px; font-size:13px; border-top:2px solid var(--border2) }
+  .pbar{height:3px;border-radius:2px;background:var(--surface3);margin-top:5px;overflow:hidden}
+  .pfill{height:100%;border-radius:2px}
+
+  /* INSIGHT GRID */
+  .igrid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:24px}
+  .icard{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:18px 20px}
+  .icard h3{font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;font-weight:600;margin-bottom:1rem;display:flex;align-items:center;gap:8px;color:var(--text)}
   .dot{width:7px;height:7px;border-radius:50%;display:inline-block;flex-shrink:0}
   .dr{background:var(--red)}.dg{background:var(--green)}
   .ilist{list-style:none;display:flex;flex-direction:column;gap:8px}
-  .ii{display:flex;gap:9px;font-size:13px;line-height:1.5;color:#ccc;padding:9px 11px;background:var(--surface2);border-radius:7px;border-left:3px solid var(--border)}
-  .ii.pos{border-left-color:var(--green)}.ii.crit{border-left-color:var(--red)}.ii.tip{border-left-color:var(--blue)}
-  .iico{font-size:15px;flex-shrink:0;margin-top:1px}
-  .config-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.5rem;margin-bottom:1rem}
-  .config-card h3{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;margin-bottom:1rem}
-  .config-input{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--text);font-size:13px;font-family:'DM Sans',sans-serif;margin-bottom:.75rem;outline:none;transition:border-color .2s}
-  .config-input:focus{border-color:rgba(236,0,0,.5)}
-  .config-btn{background:var(--red);color:#fff;border:none;border-radius:8px;padding:10px 20px;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif}
+  .ii{display:flex;gap:9px;font-size:13px;line-height:1.5;color:var(--muted);padding:9px 12px;background:var(--surface2);border-radius:7px;border-left:3px solid var(--border)}
+  .ii.pos{border-left-color:var(--green);color:var(--text)}.ii.crit{border-left-color:var(--red)}.ii.tip{border-left-color:var(--blue)}
+  .iico{font-size:14px;flex-shrink:0;margin-top:1px}
+
+  /* CONFIG */
+  .config-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:20px;margin-bottom:12px}
+  .config-card h3{font-family:'Plus Jakarta Sans',sans-serif;font-size:14px;font-weight:600;margin-bottom:1rem;color:var(--text)}
+  .config-input{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:10px 14px;color:var(--text);font-size:13px;font-family:'Plus Jakarta Sans',sans-serif;margin-bottom:.75rem;outline:none;transition:border-color .2s}
+  .config-input:focus{border-color:var(--red-border)}
+  .config-btn{background:var(--red);color:#fff;border:none;border-radius:6px;padding:9px 20px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif}
   .step{display:flex;gap:12px;margin-bottom:.75rem;padding:12px;background:var(--surface2);border-radius:8px}
   .step-num{width:24px;height:24px;border-radius:50%;background:var(--red);color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px}
-  .step-text{font-size:13px;color:#ccc;line-height:1.7}
+  .step-text{font-size:13px;color:var(--muted);line-height:1.7}
   .step-text strong{color:var(--text)}
-  .ic{background:var(--surface2);padding:2px 7px;border-radius:4px;font-family:monospace;font-size:12px;color:var(--amber);border:1px solid var(--border)}
-  .chart-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.5rem}
-  .chart-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.4rem}
-  .chart-title{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;margin-bottom:1.2rem}
+  .ic{background:var(--surface2);padding:2px 7px;border-radius:4px;font-family:'Fira Mono',monospace;font-size:12px;color:var(--amber);border:1px solid var(--border)}
+
+  /* CHARTS */
+  .chart-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:24px}
+  .chart-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:18px 20px}
+  .chart-title{font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;font-weight:600;margin-bottom:16px;display:flex;align-items:center;gap:6px;color:var(--text)}
   .chart-wrap{position:relative;height:220px}
-  .today-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:1.5rem}
-  .today-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.2rem 1.4rem;position:relative;overflow:hidden}
-  .today-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
-  .today-card.r::before{background:var(--red)}.today-card.g::before{background:var(--green)}.today-card.a::before{background:var(--amber)}.today-card.p::before{background:var(--purple)}.today-card.b::before{background:var(--blue)}
-  .today-label{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:6px}
-  .today-val{font-family:'Syne',sans-serif;font-size:26px;font-weight:700;line-height:1;margin-bottom:4px}
-  .today-card.r .today-val{color:#FF4040}.today-card.g .today-val{color:var(--green)}.today-card.a .today-val{color:var(--amber)}.today-card.p .today-val{color:var(--purple)}.today-card.b .today-val{color:var(--blue)}
+
+  /* TODAY SECTION */
+  .today-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:24px}
+  .today-card{background:var(--surface2);border-radius:8px;padding:12px 14px}
+  .today-label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:5px}
+  .today-val{font-family:'Fira Mono',monospace;font-size:22px;font-weight:500;line-height:1;margin-bottom:3px}
+  .today-card.r .today-val{color:var(--red)}.today-card.g .today-val{color:var(--green)}.today-card.a .today-val{color:var(--amber)}.today-card.p .today-val{color:var(--purple)}.today-card.b .today-val{color:var(--blue)}
   .today-note{font-size:11px;color:var(--muted)}
-  .today-header{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;margin-bottom:1rem;display:flex;align-items:center;gap:8px}
-  .today-section{background:var(--surface);border:1px solid rgba(74,158,255,.3);border-radius:12px;padding:1.4rem;margin-bottom:1.5rem;position:relative;overflow:hidden}
-  .today-section::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--blue),var(--purple))}
-  @media(max-width:768px){.metrics{grid-template-columns:1fr 1fr}.igrid{grid-template-columns:1fr}.chart-grid{grid-template-columns:1fr}.today-grid{grid-template-columns:1fr 1fr}.content{padding:1.2rem}header{padding:0 1.2rem}.tabs{padding:0 1.2rem}.month-selector{grid-template-columns:1fr}.month-card{padding:1.2rem}}
+  .today-header{font-family:'Plus Jakarta Sans',sans-serif;font-size:14px;font-weight:600;margin-bottom:14px;display:flex;align-items:center;gap:8px;color:var(--text)}
+  .today-section{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:18px 20px;margin-bottom:24px;position:relative;overflow:hidden}
+  .today-section::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--blue),var(--purple))}
+
+  @media(max-width:768px){
+    .metrics{grid-template-columns:1fr 1fr}
+    .igrid{grid-template-columns:1fr}
+    .chart-grid{grid-template-columns:1fr}
+    .today-grid{grid-template-columns:1fr 1fr}
+    .month-selector{grid-template-columns:1fr 1fr}
+    .content{padding:16px}
+    header{padding:0 16px}
+    .tabs{padding:0 16px}
+  }
 </style>
 </head>
 <body>
 
 <header>
   <div class="logo">
-    <div class="logo-icon">PJ</div>
-    <div class="logo-text">Dashboard <span>Almeida Krüger</span></div>
+    <div class="logo-icon">AK</div>
+    <div class="logo-text">Dashboard <span>— Almeida Krüger</span></div>
   </div>
   <div class="header-right">
     <div class="status-dot" id="statusDot"></div>
@@ -459,7 +504,7 @@ async function loadChannelData() {
       }
     } catch(e) {
       console.warn('SMS load failed:', e);
-      if(smsNote) { smsNote.style.color='#FF4040'; smsNote.textContent = '✗ Erro: ' + e.message; }
+      if(smsNote) { smsNote.style.color="var(--red)"; smsNote.textContent = '✗ Erro: ' + e.message; }
     }
   }
   if (CSV_URL_VOZ) {
@@ -485,7 +530,9 @@ function showLoading() {
 
 function setStatus(msg, ok) {
   document.getElementById('statusText').textContent = msg;
-  document.getElementById('statusDot').style.background = ok ? 'var(--green)' : 'var(--amber)';
+  const dot = document.getElementById('statusDot');
+  dot.style.background = ok ? 'var(--green)' : 'var(--amber)';
+  dot.style.boxShadow = ok ? '0 0 6px var(--green)' : '0 0 6px var(--amber)';
 }
 
 // ── HELPERS ──────────────────────────────────────────────────────
@@ -549,7 +596,7 @@ function getTmplRank(data) {
     return {...t,...s,rodadas:[...new Set(t.rows.map(r=>r['Nome da Campanha']))].length};
   }).sort((a,b)=>b.pok-a.pok);
 }
-function cOk(v)  { return v>=90?'var(--green)':v>=75?'var(--amber)':'#FF4040'; }
+function cOk(v)  { return v>=90?'var(--green)':v>=75?'var(--amber)':"var(--red)"; }
 function cEng(v) { return v>=12?'var(--purple)':v>=7?'var(--blue)':'var(--muted)'; }
 function bOk(v,rodadas)  {
   const conf = rodadas>=5 ? '🔒' : rodadas>=2 ? '📊' : '🆕';
@@ -645,7 +692,7 @@ function renderTodayCard(camp, tipo, idx=0) {
   const timeStr = time ? ` · ${time}` : '';
   return `
   <div class="today-section" style="border-color:${tipo==='manha'?'rgba(74,158,255,.3)':'rgba(245,166,35,.3)'}">
-    <div style="position:absolute;top:0;left:0;right:0;height:3px;background:${tipo==='manha'?'linear-gradient(90deg,var(--blue),var(--purple))':'linear-gradient(90deg,var(--amber),#FF4040)'}"></div>
+    <div style="position:absolute;top:0;left:0;right:0;height:3px;background:${tipo==='manha'?'linear-gradient(90deg,var(--blue),var(--purple))':'linear-gradient(90deg,var(--amber),var(--red))'}"></div>
     <div class="today-header">${tipo==='manha'?'🌅':'🌆'} Campanha ${tipo==='manha'?'Manhã':(idx>0?`Tarde ${idx}`:'Tarde')}${timeStr} — <span style="color:${tipo==='manha'?'var(--blue)':'var(--amber)'}}">${camp.name}</span></div>
     <div class="today-grid">
       <div class="today-card r"><div class="today-label">Total de Leads</div><div class="today-val">${s.total.toLocaleString()}</div><div class="today-note">${[...new Set(camp.rows.map(r=>r['Template']))].length} templates</div></div>
@@ -687,18 +734,18 @@ function renderChannelCards() {
       <div style="position:absolute;top:0;left:0;right:0;height:3px;background:${active ? color : 'transparent'}"></div>
       <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.6rem">
         <span style="font-size:20px">${icon}</span>
-        <span style="font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:${active?'var(--text)':'var(--muted)'}">${label}</span>
+        <span style="font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;font-weight:700;color:${active?'var(--text)':'var(--muted)'}">${label}</span>
         ${active ? `<span style="margin-left:auto;font-size:9px;background:${color}22;color:${color};padding:2px 7px;border-radius:20px;font-weight:700">ATIVO</span>` : ''}
       </div>
       ${stats ? `
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:.4rem">
           <div>
             <div style="font-size:9px;color:var(--muted);text-transform:uppercase">Entrega</div>
-            <div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:700;color:${color}">${stats.pok.toFixed(1)}%</div>
+            <div style="font-family:'Plus Jakarta Sans',sans-serif;font-size:18px;font-weight:700;color:${color}">${stats.pok.toFixed(1)}%</div>
           </div>
           <div>
             <div style="font-size:9px;color:var(--muted);text-transform:uppercase">Leads</div>
-            <div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:700;color:var(--text)">${stats.total.toLocaleString('pt-BR')}</div>
+            <div style="font-family:'Plus Jakarta Sans',sans-serif;font-size:18px;font-weight:700;color:var(--text)">${stats.total.toLocaleString('pt-BR')}</div>
           </div>
         </div>
         <div style="font-size:10px;color:var(--muted);margin-top:.4rem">${stats.engajados} engajados · ${stats.erros} erros</div>
@@ -777,7 +824,7 @@ function renderGeral() {
     el.innerHTML = renderChannelCards() + (isEmpty
       ? `<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:2rem;text-align:center;margin-top:.5rem">
           <div style="font-size:32px;margin-bottom:.8rem">${activeChannel==='sms'?'📱':'🎙️'}</div>
-          <div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:700;margin-bottom:.5rem">Dados de ${activeChannel.toUpperCase()} ainda não configurados</div>
+          <div style="font-family:'Plus Jakarta Sans',sans-serif;font-size:16px;font-weight:700;margin-bottom:.5rem">Dados de ${activeChannel.toUpperCase()} ainda não configurados</div>
           <div style="font-size:13px;color:var(--muted);margin-bottom:1rem">Quando tiver os dados, vá em <strong>⚙️ Configurar</strong> e cole a URL da aba ${activeChannel.toUpperCase()} da planilha.</div>
         </div>`
       : `<div style="padding:2rem;text-align:center;color:var(--muted)">Sem dados WhatsApp.</div>`);
@@ -829,7 +876,7 @@ function renderGeral() {
           return`<tr><td><strong>${c.name}</strong></td><td>${s.total}</td>
             <td><span style="color:${cOk(s.pok)};font-weight:600">${s.pok.toFixed(1)}%</span></td>
             ${activeChannel!=='sms'?`<td style="color:${cEng(s.peng)};font-weight:500">${s.peng.toFixed(1)}%</td>
-            <td style="color:${s.perr>20?'#FF4040':'var(--muted)'}">${s.perr.toFixed(1)}%</td>
+            <td style="color:${s.perr>20?"var(--red)":'var(--muted)'}">${s.perr.toFixed(1)}%</td>
             <td>${tmpl}</td>`:''}</tr>`;
         }).join('')}</tbody>
       </table></div>
@@ -869,11 +916,11 @@ function renderCharts(daily) {
     plugins: {
       legend: { display: false },
       tooltip: {
-        backgroundColor: '#1C1C1C',
-        borderColor: '#2A2A2A',
+        backgroundColor: '#21262D',
+        borderColor: '#30363D',
         borderWidth: 1,
-        titleColor: '#F0F0F0',
-        bodyColor: '#aaa',
+        titleColor: '#E6EDF3',
+        bodyColor: '#7D8590',
         callbacks: {
           label: ctx => ` ${ctx.raw}% ${label}`,
           afterLabel: ctx => afterFn(ctx)
@@ -881,10 +928,10 @@ function renderCharts(daily) {
       }
     },
     scales: {
-      x: { ticks: { color: '#555', font: { size: 11 } }, grid: { color: '#1A1A1A' } },
+      x: { ticks: { color: '#484F58', font: { size: 11, family: 'Fira Mono' } }, grid: { color: '#21262D' } },
       y: {
-        ticks: { color: '#555', font: { size: 10 }, callback: v => v + '%' },
-        grid: { color: '#1E1E1E' },
+        ticks: { color: '#484F58', font: { size: 10, family: 'Fira Mono' }, callback: v => v + '%' },
+        grid: { color: '#1C2128' },
         min: 0, max: 100
       }
     }
@@ -896,13 +943,13 @@ function renderCharts(daily) {
       labels,
       datasets: [{
         data: deliveries,
-        borderColor: '#00C97A',
-        backgroundColor: 'rgba(0,201,122,.08)',
-        pointBackgroundColor: deliveries.map(v => v>=85?'#00C97A':v>=75?'#F5A623':'#EC0000'),
-        pointBorderColor: '#0A0A0A',
-        pointRadius: 6,
-        pointHoverRadius: 8,
-        borderWidth: 2.5,
+        borderColor: '#3FB950',
+        backgroundColor: 'rgba(63,185,80,.07)',
+        pointBackgroundColor: deliveries.map(v => v>=85?'#3FB950':v>=75?'#D29922':'#F85149'),
+        pointBorderColor: '#0D1117',
+        pointRadius: 5,
+        pointHoverRadius: 7,
+        borderWidth: 2,
         tension: 0.35,
         fill: true,
       }]
@@ -916,13 +963,13 @@ function renderCharts(daily) {
       labels,
       datasets: [{
         data: errors,
-        borderColor: '#EC0000',
-        backgroundColor: 'rgba(236,0,0,.07)',
-        pointBackgroundColor: errors.map(v => v>25?'#EC0000':v>15?'#F5A623':'#4A9EFF'),
-        pointBorderColor: '#0A0A0A',
-        pointRadius: 6,
-        pointHoverRadius: 8,
-        borderWidth: 2.5,
+        borderColor: '#F85149',
+        backgroundColor: 'rgba(248,81,73,.07)',
+        pointBackgroundColor: errors.map(v => v>25?'#F85149':v>15?'#D29922':'#58A6FF'),
+        pointBorderColor: '#0D1117',
+        pointRadius: 5,
+        pointHoverRadius: 7,
+        borderWidth: 2,
         tension: 0.35,
         fill: true,
       }]
@@ -930,10 +977,10 @@ function renderCharts(daily) {
     options: {
       ...baseOpts(errors, 'de erro', v=>v, ctx=>`Falhas: ${Math.round(totals[ctx.dataIndex]*errors[ctx.dataIndex]/100).toLocaleString()}`),
       scales: {
-        x: { ticks: { color: '#555', font: { size: 11 } }, grid: { color: '#1A1A1A' } },
+        x: { ticks: { color: '#484F58', font: { size: 11, family: 'Fira Mono' } }, grid: { color: '#21262D' } },
         y: {
-          ticks: { color: '#555', font: { size: 10 }, callback: v => v + '%' },
-          grid: { color: '#1E1E1E' },
+          ticks: { color: '#484F58', font: { size: 10, family: 'Fira Mono' }, callback: v => v + '%' },
+          grid: { color: '#1C2128' },
           min: 0,
           max: Math.min(100, Math.max(...errors) + 15)
         }
@@ -1002,7 +1049,7 @@ function renderMonthCampaigns(month) {
             <div class="camp-stats">
               <div class="cs"><div class="cs-val" style="color:${cOk(s.pok)}">${s.pok.toFixed(0)}%</div><div class="cs-label">Entrega</div></div>
               <div class="cs"><div class="cs-val" style="color:var(--purple)">${s.peng.toFixed(0)}%</div><div class="cs-label">Engaj.</div></div>
-              <div class="cs"><div class="cs-val" style="color:${s.perr>20?'#FF4040':'var(--amber)'}">${s.perr.toFixed(0)}%</div><div class="cs-label">Erro</div></div>
+              <div class="cs"><div class="cs-val" style="color:${s.perr>20?"var(--red)":'var(--amber)'}">${s.perr.toFixed(0)}%</div><div class="cs-label">Erro</div></div>
             </div>
           </div>`;
         }).join('')}
@@ -1036,7 +1083,7 @@ function selectCamp(name) {
           <td style="color:var(--muted);font-size:11px">${String(i+1).padStart(2,'0')}</td>
           <td><strong>${r.name}</strong></td><td>${r.total}</td><td>${r.entregues}</td>
           <td style="color:${cEng(r.peng)};font-weight:600">${r.engajados}</td>
-          <td style="color:${r.erros>r.total*.15?'#FF4040':'var(--muted)'}">${r.erros}</td>
+          <td style="color:${r.erros>r.total*.15?"var(--red)":'var(--muted)'}">${r.erros}</td>
           <td>${r.pok.toFixed(1)}%<div class="pbar"><div class="pfill" style="width:${r.pok}%;background:${cOk(r.pok)}"></div></div></td>
           <td style="color:${cEng(r.peng)};font-weight:500">${r.peng.toFixed(1)}%</td>
           <td>${bOk(r.pok)}</td></tr>`).join('')}
@@ -1083,41 +1130,41 @@ function openTmplModal(name) {
   document.getElementById('tmplModalContent').innerHTML = `
     <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1.2rem;flex-wrap:wrap;gap:.5rem">
       <div>
-        <div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:700;color:var(--text)">${name}</div>
+        <div style="font-family:'Plus Jakarta Sans',sans-serif;font-size:18px;font-weight:700;color:var(--text)">${name}</div>
         <div style="font-size:12px;color:var(--muted);margin-top:3px">${t.rodadas} rodadas · ${t.total} leads totais</div>
       </div>
       <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap">
         <span style="background:rgba(0,0,0,.3);padding:4px 10px;border-radius:8px;font-size:12px;color:${conf.color};font-weight:600">🔒 Confiabilidade: ${conf.label}</span>
-        <button onclick="document.getElementById('tmplModalOverlay').style.display='none'" style="background:var(--surface2);border:1px solid var(--border);color:var(--muted);padding:5px 12px;border-radius:8px;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:12px">✕ Fechar</button>
+        <button onclick="document.getElementById('tmplModalOverlay').style.display='none'" style="background:var(--surface2);border:1px solid var(--border);color:var(--muted);padding:5px 12px;border-radius:8px;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;font-size:12px">✕ Fechar</button>
       </div>
     </div>
 
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:.7rem;margin-bottom:1.2rem">
       <div style="background:var(--surface2);border-radius:8px;padding:.8rem;border-top:2px solid var(--green)">
         <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">% Entrega Acum.</div>
-        <div style="font-family:'Syne',sans-serif;font-size:22px;font-weight:700;color:${cOk(t.pok)}">${t.pok.toFixed(1)}%</div>
+        <div style="font-family:'Plus Jakarta Sans',sans-serif;font-size:22px;font-weight:700;color:${cOk(t.pok)}">${t.pok.toFixed(1)}%</div>
       </div>
       <div style="background:var(--surface2);border-radius:8px;padding:.8rem;border-top:2px solid var(--purple)">
         <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">% Engaj. Acum.</div>
-        <div style="font-family:'Syne',sans-serif;font-size:22px;font-weight:700;color:${cEng(t.peng)}">${t.peng.toFixed(1)}%</div>
+        <div style="font-family:'Plus Jakarta Sans',sans-serif;font-size:22px;font-weight:700;color:${cEng(t.peng)}">${t.peng.toFixed(1)}%</div>
       </div>
       <div style="background:var(--surface2);border-radius:8px;padding:.8rem;border-top:2px solid var(--amber)">
         <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Melhor Entrega</div>
-        <div style="font-family:'Syne',sans-serif;font-size:22px;font-weight:700;color:var(--green)">${Math.max(...hist.map(h=>h.pok)).toFixed(1)}%</div>
+        <div style="font-family:'Plus Jakarta Sans',sans-serif;font-size:22px;font-weight:700;color:var(--green)">${Math.max(...hist.map(h=>h.pok)).toFixed(1)}%</div>
       </div>
-      <div style="background:var(--surface2);border-radius:8px;padding:.8rem;border-top:2px solid #FF4040">
+      <div style="background:var(--surface2);border-radius:8px;padding:.8rem;border-top:2px solid var(--red)">
         <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Pior Entrega</div>
-        <div style="font-family:'Syne',sans-serif;font-size:22px;font-weight:700;color:#FF4040">${Math.min(...hist.map(h=>h.pok)).toFixed(1)}%</div>
+        <div style="font-family:'Plus Jakarta Sans',sans-serif;font-size:22px;font-weight:700;color:var(--red)">${Math.min(...hist.map(h=>h.pok)).toFixed(1)}%</div>
       </div>
     </div>
 
     <div style="background:var(--surface2);border-radius:10px;padding:1.2rem;margin-bottom:1rem">
-      <div style="font-family:'Syne',sans-serif;font-size:12px;font-weight:700;margin-bottom:1rem">📈 Evolução por Campanha</div>
+      <div style="font-family:'Plus Jakarta Sans',sans-serif;font-size:12px;font-weight:700;margin-bottom:1rem">📈 Evolução por Campanha</div>
       <div style="position:relative;height:200px"><canvas id="chartTmplDetalhe"></canvas></div>
     </div>
 
     <div style="background:var(--surface2);border-radius:10px;padding:1rem">
-      <div style="font-family:'Syne',sans-serif;font-size:12px;font-weight:700;margin-bottom:.8rem">📋 Histórico detalhado</div>
+      <div style="font-family:'Plus Jakarta Sans',sans-serif;font-size:12px;font-weight:700;margin-bottom:.8rem">📋 Histórico detalhado</div>
       <div style="overflow-x:auto">
         <table style="width:100%;border-collapse:collapse;min-width:400px">
           <thead><tr style="border-bottom:1px solid var(--border)">
@@ -1132,7 +1179,7 @@ function openTmplModal(name) {
             <td style="padding:6px 8px;font-size:12px">${h.total}</td>
             <td style="padding:6px 8px;font-size:12px;font-weight:600;color:${cOk(h.pok)}">${h.pok.toFixed(1)}%</td>
             <td style="padding:6px 8px;font-size:12px;color:${cEng(h.peng)}">${h.peng.toFixed(1)}%</td>
-            <td style="padding:6px 8px;font-size:12px;color:${h.perr>25?'#FF4040':'var(--muted)'}">${h.perr.toFixed(1)}%</td>
+            <td style="padding:6px 8px;font-size:12px;color:${h.perr>25?"var(--red)":'var(--muted)'}">${h.perr.toFixed(1)}%</td>
           </tr>`).join('')}</tbody>
         </table>
       </div>
@@ -1150,17 +1197,17 @@ function openTmplModal(name) {
           {
             label: '% Entrega',
             data: hist.map(h => parseFloat(h.pok.toFixed(1))),
-            borderColor: '#00C97A', backgroundColor: 'rgba(0,201,122,.08)',
-            pointBackgroundColor: hist.map(h => h.pok>=90?'#00C97A':h.pok>=75?'#F5A623':'#EC0000'),
-            pointBorderColor: '#0A0A0A', pointRadius: 6, pointHoverRadius: 8,
-            borderWidth: 2.5, tension: 0.35, fill: true, yAxisID: 'y'
+            borderColor: '#3FB950', backgroundColor: 'rgba(63,185,80,.07)',
+            pointBackgroundColor: hist.map(h => h.pok>=90?'#3FB950':h.pok>=75?'#D29922':'#F85149'),
+            pointBorderColor: '#0D1117', pointRadius: 5, pointHoverRadius: 7,
+            borderWidth: 2, tension: 0.35, fill: true, yAxisID: 'y'
           },
           {
             label: '% Engaj.',
             data: hist.map(h => parseFloat(h.peng.toFixed(1))),
-            borderColor: '#A78BFA', backgroundColor: 'transparent',
-            pointBackgroundColor: '#A78BFA', pointBorderColor: '#0A0A0A',
-            pointRadius: 5, pointHoverRadius: 7,
+            borderColor: '#BC8CFF', backgroundColor: 'transparent',
+            pointBackgroundColor: '#BC8CFF', pointBorderColor: '#0D1117',
+            pointRadius: 4, pointHoverRadius: 6,
             borderWidth: 2, tension: 0.35, fill: false, yAxisID: 'y2', borderDash: [4,3]
           }
         ]
@@ -1168,17 +1215,17 @@ function openTmplModal(name) {
       options: {
         responsive: true, maintainAspectRatio: false,
         plugins: {
-          legend: { display: true, labels: { color: '#777', font: { size: 11 }, boxWidth: 16, padding: 12 } },
+          legend: { display: true, labels: { color: '#7D8590', font: { size: 11, family: 'Plus Jakarta Sans' }, boxWidth: 14, padding: 12 } },
           tooltip: {
-            backgroundColor: '#1C1C1C', borderColor: '#2A2A2A', borderWidth: 1,
-            titleColor: '#F0F0F0', bodyColor: '#aaa',
+            backgroundColor: '#21262D', borderColor: '#30363D', borderWidth: 1,
+            titleColor: '#E6EDF3', bodyColor: '#7D8590',
             callbacks: { label: ctx => ` ${ctx.dataset.label}: ${ctx.raw}%` }
           }
         },
         scales: {
-          x: { ticks: { color: '#555', font: { size: 10 }, maxRotation: 35 }, grid: { color: '#1A1A1A' } },
-          y: { position: 'left', ticks: { color: '#555', font: { size: 10 }, callback: v => v + '%' }, grid: { color: '#1E1E1E' }, min: 0, max: 100 },
-          y2: { position: 'right', ticks: { color: '#A78BFA', font: { size: 10 }, callback: v => v + '%' }, grid: { display: false }, min: 0 }
+          x: { ticks: { color: '#484F58', font: { size: 10, family: 'Fira Mono' }, maxRotation: 35 }, grid: { color: '#21262D' } },
+          y: { position: 'left', ticks: { color: '#484F58', font: { size: 10, family: 'Fira Mono' }, callback: v => v + '%' }, grid: { color: '#1C2128' }, min: 0, max: 100 },
+          y2: { position: 'right', ticks: { color: '#BC8CFF', font: { size: 10, family: 'Fira Mono' }, callback: v => v + '%' }, grid: { display: false }, min: 0 }
         }
       }
     });
@@ -1247,33 +1294,33 @@ function renderValores() {
   const mediaErro = 100 - mediaEntrega;
 
   el.innerHTML = `
-    <div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:700;margin-bottom:.3rem">📊 Resumo Consolidado — Período</div>
+    <div style="font-family:'Plus Jakarta Sans',sans-serif;font-size:16px;font-weight:700;margin-bottom:.3rem">📊 Resumo Consolidado — Período</div>
     <div class="sec-sub" style="margin-bottom:1rem">Investimento real acumulado por canal</div>
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:.8rem;margin-bottom:1rem">
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1rem;border-top:2px solid var(--green)">
         <div style="font-size:9px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:.4rem">💬 Total WhatsApp</div>
-        <div style="font-family:'Syne',sans-serif;font-size:22px;font-weight:700;color:var(--green)">R$ ${totalGasto.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
+        <div style="font-family:'Plus Jakarta Sans',sans-serif;font-size:22px;font-weight:700;color:var(--green)">R$ ${totalGasto.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
         <div style="font-size:11px;color:var(--muted);margin-top:.3rem">${totalEntregues.toLocaleString('pt-BR')} msgs · R$ 0,43</div>
       </div>
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1rem;border-top:2px solid var(--blue)">
         <div style="font-size:9px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:.4rem">📱 Total SMS</div>
         ${smsData.length
-          ? `<div style="font-family:'Syne',sans-serif;font-size:22px;font-weight:700;color:var(--blue)">R$ ${(smsData.length*0.07).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
+          ? `<div style="font-family:'Plus Jakarta Sans',sans-serif;font-size:22px;font-weight:700;color:var(--blue)">R$ ${(smsData.length*0.07).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
              <div style="font-size:11px;color:var(--muted);margin-top:.3rem">${smsData.length.toLocaleString('pt-BR')} msgs · R$ 0,07</div>`
-          : `<div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:600;color:var(--muted)">—</div>
+          : `<div style="font-family:'Plus Jakarta Sans',sans-serif;font-size:16px;font-weight:600;color:var(--muted)">—</div>
              <div style="font-size:11px;color:var(--border);margin-top:.3rem">sem dados</div>`}
       </div>
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1rem;border-top:2px solid var(--purple)">
         <div style="font-size:9px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:.4rem">🎙️ Total Voz</div>
         ${vozData.length
-          ? `<div style="font-family:'Syne',sans-serif;font-size:22px;font-weight:700;color:var(--purple)">R$ ${vozGasto.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
+          ? `<div style="font-family:'Plus Jakarta Sans',sans-serif;font-size:22px;font-weight:700;color:var(--purple)">R$ ${vozGasto.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
              <div style="font-size:11px;color:var(--muted);margin-top:.3rem">${vozEntregues.toLocaleString('pt-BR')} ligações</div>`
-          : `<div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:600;color:var(--muted)">—</div>
+          : `<div style="font-family:'Plus Jakarta Sans',sans-serif;font-size:16px;font-weight:600;color:var(--muted)">—</div>
              <div style="font-size:11px;color:var(--border);margin-top:.3rem">sem dados</div>`}
       </div>
       <div style="background:var(--surface);border:2px solid var(--amber);border-radius:10px;padding:1rem">
         <div style="font-size:9px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:.4rem">💰 Total Período</div>
-        <div style="font-family:'Syne',sans-serif;font-size:22px;font-weight:700;color:var(--amber)">R$ ${totalMes.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
+        <div style="font-family:'Plus Jakarta Sans',sans-serif;font-size:22px;font-weight:700;color:var(--amber)">R$ ${totalMes.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
         <div style="font-size:11px;color:var(--muted);margin-top:.3rem">WPP + SMS${vozData.length?' + Voz':''}</div>
       </div>
     </div>
@@ -1282,31 +1329,82 @@ function renderValores() {
 
     <div style="display:flex;align-items:center;gap:.6rem;margin-bottom:.5rem">
       <span style="font-size:18px">💬</span>
-      <div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:700">WhatsApp — Análise Financeira</div>
+      <div style="font-family:'Plus Jakarta Sans',sans-serif;font-size:16px;font-weight:700">WhatsApp — Análise Financeira</div>
     </div>
     <div class="sec-sub" style="margin-bottom:1rem">Valor por mensagem: R$ 0,43 · Cobrado somente nas entregues · Base: ${totalLeads.toLocaleString('pt-BR')} leads enviados</div>
 
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:.8rem;margin-bottom:1.2rem">
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1rem;border-top:2px solid var(--green)">
         <div style="font-size:9px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:.4rem">Total Investido</div>
-        <div style="font-family:'Syne',sans-serif;font-size:24px;font-weight:700;color:var(--green)">R$ ${totalGasto.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
+        <div style="font-family:'Plus Jakarta Sans',sans-serif;font-size:24px;font-weight:700;color:var(--green)">R$ ${totalGasto.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
         <div style="font-size:11px;color:var(--muted);margin-top:.3rem">${totalEntregues.toLocaleString('pt-BR')} entregues cobradas</div>
       </div>
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1rem;border-top:2px solid var(--blue)">
         <div style="font-size:9px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:.4rem">Custo / Mensagem</div>
-        <div style="font-family:'Syne',sans-serif;font-size:24px;font-weight:700;color:var(--blue)">R$ 0,43</div>
+        <div style="font-family:'Plus Jakarta Sans',sans-serif;font-size:24px;font-weight:700;color:var(--blue)">R$ 0,43</div>
         <div style="font-size:11px;color:var(--muted);margin-top:.3rem">só entregues são cobradas</div>
       </div>
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1rem;border-top:2px solid var(--amber)">
         <div style="font-size:9px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:.4rem">Economia nos Erros</div>
-        <div style="font-family:'Syne',sans-serif;font-size:24px;font-weight:700;color:var(--amber)">R$ ${totalEconomia.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
+        <div style="font-family:'Plus Jakarta Sans',sans-serif;font-size:24px;font-weight:700;color:var(--amber)">R$ ${totalEconomia.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
         <div style="font-size:11px;color:var(--muted);margin-top:.3rem">${totalErros.toLocaleString('pt-BR')} msgs com erro (grátis)</div>
       </div>
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1rem;border-top:2px solid var(--purple)">
         <div style="font-size:9px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:.4rem">Média Real % Entrega</div>
-        <div style="font-family:'Syne',sans-serif;font-size:24px;font-weight:700;color:var(--purple)">${mediaEntrega.toFixed(1)}%</div>
+        <div style="font-family:'Plus Jakarta Sans',sans-serif;font-size:24px;font-weight:700;color:var(--purple)">${mediaEntrega.toFixed(1)}%</div>
         <div style="font-size:11px;color:var(--muted);margin-top:.3rem">base: ${camps.length} campanhas</div>
       </div>
+    </div>
+
+    <div class="table-wrap">
+      <div class="table-top">
+        <span class="table-top-title">Análise Financeira WhatsApp</span>
+        <span style="font-size:11px;color:var(--muted)">${camps.length} campanha(s) · R$ 0,43 por entregue</span>
+      </div>
+      <div class="table-scroll"><table>
+        <thead><tr>
+          <th>Campanha</th>
+          <th>Leads</th>
+          <th>Entregues</th>
+          <th>Erros</th>
+          <th>Custo Unit.</th>
+          <th>Total</th>
+          <th>Economia (erros)</th>
+          <th>% Entrega</th>
+        </tr></thead>
+        <tbody>
+          ${camps.map(c => {
+            const s = calcStats(c.rows);
+            const custoCamp = s.entregues * CUSTO;
+            const economiaCamp = s.erros * CUSTO;
+            return `<tr>
+              <td><strong>${c.name}</strong></td>
+              <td style="font-family:'Fira Mono',monospace;font-size:12px">${s.total.toLocaleString('pt-BR')}</td>
+              <td style="font-family:'Fira Mono',monospace;font-size:12px;color:var(--green)">${s.entregues.toLocaleString('pt-BR')}</td>
+              <td style="font-family:'Fira Mono',monospace;font-size:12px;color:${s.erros > s.total * 0.2 ? 'var(--red)' : 'var(--muted)'}">${s.erros.toLocaleString('pt-BR')}</td>
+              <td style="font-family:'Fira Mono',monospace;font-size:12px;color:var(--muted)">R$ 0,43</td>
+              <td style="font-family:'Fira Mono',monospace;font-size:12px;color:var(--green);font-weight:500">R$ ${custoCamp.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}</td>
+              <td style="font-family:'Fira Mono',monospace;font-size:12px;color:var(--amber)">R$ ${economiaCamp.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}</td>
+              <td>
+                <span style="font-family:'Fira Mono',monospace;font-size:12px;color:${cOk(s.pok)};font-weight:500">${s.pok.toFixed(1)}%</span>
+                <div class="pbar"><div class="pfill" style="width:${s.pok}%;background:${cOk(s.pok)}"></div></div>
+              </td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+        <tfoot>
+          <tr style="border-top:2px solid var(--border2)">
+            <td style="font-weight:600;color:var(--text);padding:12px 20px">Total</td>
+            <td style="font-family:'Fira Mono',monospace;font-size:12px;padding:12px 20px">${totalLeads.toLocaleString('pt-BR')}</td>
+            <td style="font-family:'Fira Mono',monospace;font-size:12px;color:var(--green);padding:12px 20px">${totalEntregues.toLocaleString('pt-BR')}</td>
+            <td style="font-family:'Fira Mono',monospace;font-size:12px;color:var(--muted);padding:12px 20px">${totalErros.toLocaleString('pt-BR')}</td>
+            <td style="padding:12px 20px">—</td>
+            <td style="font-family:'Fira Mono',monospace;font-size:12px;color:var(--green);font-weight:700;padding:12px 20px">R$ ${totalGasto.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}</td>
+            <td style="font-family:'Fira Mono',monospace;font-size:12px;color:var(--amber);font-weight:700;padding:12px 20px">R$ ${totalEconomia.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}</td>
+            <td style="padding:12px 20px">—</td>
+          </tr>
+        </tfoot>
+      </table></div>
     </div>
   `;
 }

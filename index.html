@@ -61,12 +61,13 @@
   .month-selector{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:2rem;max-width:900px}
   .month-card{background:var(--surface);border:2px solid var(--border);border-radius:12px;padding:1.5rem;cursor:pointer;transition:all .2s;position:relative;overflow:hidden}
   .month-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
-  .month-card.march::before{background:var(--green)}.month-card.april::before{background:var(--blue)}.month-card.may::before{background:var(--amber)}
+  .month-card.march::before{background:var(--green)}.month-card.april::before{background:var(--blue)}.month-card.may::before{background:var(--amber)}.month-card.june::before{background:var(--purple)}
   .month-card:hover{border-color:rgba(255,255,255,.2);transform:translateY(-2px)}
   .month-card.active{border-color:var(--text);background:var(--surface2)}
   .month-card.active.march{border-color:var(--green);background:rgba(0,201,122,.1)}
   .month-card.active.april{border-color:var(--blue);background:rgba(74,158,255,.1)}
   .month-card.active.may{border-color:var(--amber);background:rgba(245,166,35,.1)}
+  .month-card.active.june{border-color:var(--purple);background:rgba(167,139,250,.1)}
   .month-icon{font-size:24px;margin-bottom:.5rem}
   .month-title{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;margin-bottom:.3rem}
   .month-sub{font-size:11px;color:var(--muted)}
@@ -204,7 +205,7 @@
     <div style="font-size:12px;margin-top:.5rem" id="configNoteSms"></div>
   </div>
   <div class="config-card" style="border-top:2px solid var(--purple)">
-    <h3>🎙�� Voz — URL do CSV (aba Voz)</h3>
+    <h3>🎙   Voz — URL do CSV (aba Voz)</h3>
     <input type="text" class="config-input" id="csvUrlVoz" placeholder="https://docs.google.com/spreadsheets/d/e/XXXXX/pub?gid=XXXXX&single=true&output=csv"/>
     <div style="font-size:11px;color:var(--muted);margin:.4rem 0">Publique a aba <strong>Voz</strong> separadamente e cole a URL aqui. Deixe em branco se ainda não tiver dados.</div>
     <button class="config-btn" style="background:var(--purple)" onclick="saveConfigVoz()">Salvar Voz</button>
@@ -728,6 +729,7 @@ function renderMonthFilterBar() {
     <button class="filter-btn ${currentMonthFilter === '03' ? 'active' : ''}" onclick="setMonthFilter('03', this)">Março (03)</button>
     <button class="filter-btn ${currentMonthFilter === '04' ? 'active' : ''}" onclick="setMonthFilter('04', this)">Abril (04)</button>
     <button class="filter-btn ${currentMonthFilter === '05' ? 'active' : ''}" onclick="setMonthFilter('05', this)">Maio (05)</button>
+    <button class="filter-btn ${currentMonthFilter === '06' ? 'active' : ''}" onclick="setMonthFilter('06', this)">Junho (06)</button>
   `;
 }
 
@@ -740,6 +742,7 @@ function renderValoresFilterBar() {
     <button class="filter-btn ${currentMonthFilter === '03' ? 'active' : ''}" onclick="setMonthFilter('03', this); setTimeout(() => renderValores(), 100)">Março (03)</button>
     <button class="filter-btn ${currentMonthFilter === '04' ? 'active' : ''}" onclick="setMonthFilter('04', this); setTimeout(() => renderValores(), 100)">Abril (04)</button>
     <button class="filter-btn ${currentMonthFilter === '05' ? 'active' : ''}" onclick="setMonthFilter('05', this); setTimeout(() => renderValores(), 100)">Maio (05)</button>
+    <button class="filter-btn ${currentMonthFilter === '06' ? 'active' : ''}" onclick="setMonthFilter('06', this); setTimeout(() => renderValores(), 100)">Junho (06)</button>
   `;
 }
 
@@ -947,6 +950,7 @@ function renderCampCards() {
   const march = getCampaignsByMonth('03');
   const april = getCampaignsByMonth('04');
   const may   = getCampaignsByMonth('05');
+  const june  = getCampaignsByMonth('06');
 
   monthSel.innerHTML = `
     <div class="month-card march active" onclick="selectMonth('03', this)">
@@ -964,6 +968,11 @@ function renderCampCards() {
       <div class="month-title">Maio (05)</div>
       <div class="month-sub">${may.length} campanhas · ${may.reduce((sum, c) => sum + c.rows.length, 0).toLocaleString()} leads</div>
     </div>
+    <div class="month-card june" onclick="selectMonth('06', this)">
+      <div class="month-icon">📅</div>
+      <div class="month-title">Junho (06)</div>
+      <div class="month-sub">${june.length} campanhas · ${june.reduce((sum, c) => sum + c.rows.length, 0).toLocaleString()} leads</div>
+    </div>
   `;
 }
 
@@ -978,7 +987,7 @@ function renderMonthCampaigns(month) {
   const camps = getCampaignsByMonth(month);
   const detail = document.getElementById('campDetail');
 
-  const monthName = month === '03' ? 'Março' : month === '04' ? 'Abril' : 'Maio';
+  const monthName = month === '03' ? 'Março' : month === '04' ? 'Abril' : month === '05' ? 'Maio' : 'Junho';
 
   detail.innerHTML = `
     <div style="margin-top:2rem">

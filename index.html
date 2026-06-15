@@ -305,8 +305,10 @@ let PORTALAK_GID = localStorage.getItem('ak_portalak_gid') || '0';
 let PORTALAK_URL = localStorage.getItem('ak_portalak_url') || '';
 
 function buildSheetUrl(baseUrl, gid) {
-  const base = baseUrl.split('?')[0].split('#')[0];
-  // URL publicada (.../pub): mantém o formato de publicação por gid
+  let base = baseUrl.split('?')[0].split('#')[0];
+  // /pubhtml é a página HTML; o CSV equivalente é /pub?output=csv
+  base = base.replace(/\/pubhtml$/, '/pub');
+  // URL publicada (.../pub): formato de publicação por gid em CSV
   if (/\/pub$/.test(base)) {
     return base + '?gid=' + gid + '&single=true&output=csv';
   }

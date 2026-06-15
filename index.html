@@ -206,6 +206,7 @@
 <div id="campanhas" class="panel content">
   <div class="sec-title">Campanhas</div>
   <div class="sec-sub">Selecione um mês para ver as campanhas</div>
+  <div class="filter-bar" id="campSourceBar"></div>
   <div id="monthSelector" class="month-selector"></div>
   <div id="campDetail"></div>
 </div>
@@ -213,6 +214,7 @@
 <div id="templates" class="panel content">
   <div class="sec-title">Ranking de Templates</div>
   <div class="sec-sub">Performance acumulada de todas as campanhas</div>
+  <div class="filter-bar" id="tmplSourceBar"></div>
   <div class="filter-bar">
     <span class="filter-label">Filtrar:</span>
     <button class="filter-btn active" onclick="filterTmpl('todos',this)">Todos</button>
@@ -225,6 +227,7 @@
 </div>
 
 <div id="valores" class="panel content">
+  <div class="filter-bar" id="valSourceBar"></div>
   <div class="filter-bar" id="valoresFilterBar"></div>
   <div id="valoresContent"><div class="loading"><div class="spinner"></div><div class="loading-text">Carregando análise financeira...</div></div></div>
 </div>
@@ -240,9 +243,9 @@
     <div style="font-size:12px;margin-top:.5rem" id="configNote"></div>
   </div>
   <div class="config-card" style="border-top:2px solid var(--green)">
-    <h3>🟢 Portal AK — aba PortalAk (mesma planilha)</h3>
-    <input type="text" class="config-input" id="portalGid" placeholder="gid da aba PortalAk (ex: 123456789)"/>
-    <div style="font-size:11px;color:var(--muted);margin:.4rem 0">Usa a <strong>mesma URL</strong> do WhatsApp acima, mudando só a aba. Pegue o <strong>gid</strong> da aba <strong>PortalAk</strong> na barra de endereço do Google Sheets (<code>...#gid=NUMERO</code>) e cole aqui.</div>
+    <h3>🟢 Portal AK — aba PortalAk</h3>
+    <input type="text" class="config-input" id="portalGid" placeholder="Cole a URL completa da aba PortalAk (com #gid=...) ou só o número do gid"/>
+    <div style="font-size:11px;color:var(--muted);margin:.4rem 0">Pode colar a <strong>URL inteira</strong> da planilha do Portal AK aberta na aba <strong>PortalAk</strong> (o link da barra de endereço, com <code>#gid=NUMERO</code>) — eu extraio o gid sozinho. Se for a mesma planilha do WhatsApp, pode colar só o número do gid. <strong>Importante:</strong> a planilha precisa estar pública ou publicada na web (Arquivo → Compartilhar → Publicar na web).</div>
     <button class="config-btn" style="background:var(--green)" onclick="savePortalGid()">Salvar Portal AK</button>
     <div style="font-size:12px;margin-top:.5rem" id="configNotePortal"></div>
   </div>
@@ -298,9 +301,22 @@ let selectedMonth = null;
 // gid da aba PortalAk dentro da MESMA planilha (URL única).
 // Ajuste pela aba ⚙️ Configurar se o gid mudar.
 let PORTALAK_GID = localStorage.getItem('ak_portalak_gid') || '0';
+// URL completa da planilha do Portal AK (caso seja uma planilha diferente da do WhatsApp)
+let PORTALAK_URL = localStorage.getItem('ak_portalak_url') || '';
 
 function buildSheetUrl(baseUrl, gid) {
-  const base = baseUrl.split('?')[0];
+  const base = baseUrl.split('?')[0].split('#')[0];
+  // URL publicada (.../pub): mantém o formato de publicação por gid
+  if (/\/pub$/.test(base)) {
+    return base + '?gid=' + gid + '&single=true&output=csv';
+  }
+  // URL de edição (.../edit ou .../d/ID/...): converte para export CSV
+  const idMatch = baseUrl.match(/\/d\/(?:e\/)?([a-zA-Z0-9_-]+)/);
+  if (idMatch) {
+    return 'https://docs.google.com/spreadsheets/d/' + idMatch[1] +
+           '/export?format=csv&gid=' + gid;
+  }
+  // fallback
   return base + '?gid=' + gid + '&single=true&output=csv';
 }
 let CSV_URL_SMS = localStorage.getItem('ak_csv_sms') || '';
@@ -309,7 +325,7 @@ let CSV_URL_VOZ = localStorage.getItem('ak_csv_voz') || '';
 document.getElementById('csvUrl').value = CSV_URL;
 if (CSV_URL_SMS && document.getElementById('csvUrlSms')) document.getElementById('csvUrlSms').value = CSV_URL_SMS;
 if (CSV_URL_VOZ && document.getElementById('csvUrlVoz')) document.getElementById('csvUrlVoz').value = CSV_URL_VOZ;
-if (document.getElementById('portalGid')) document.getElementById('portalGid').value = (PORTALAK_GID && PORTALAK_GID!=='0') ? PORTALAK_GID : '';
+if (document.getElementById('portalGid')) document.getElementById('portalGid').value = PORTALAK_URL || ((PORTALAK_GID && PORTALAK_GID!=='0') ? PORTALAK_GID : '');
 
 function saveConfig() {
   const url = document.getElementById('csvUrl').value.trim();
@@ -322,12 +338,23 @@ function saveConfig() {
 function note(msg,color){ const n=document.getElementById('configNote'); n.style.color=color||'var(--muted)'; n.textContent=msg; }
 
 function savePortalGid() {
-  const gid = (document.getElementById('portalGid').value || '').trim();
+  let raw = (document.getElementById('portalGid').value || '').trim();
   const n = document.getElementById('configNotePortal');
-  if (!gid) { n.style.color='var(--amber)'; n.textContent='⚠️ Cole o gid da aba PortalAk.'; return; }
+  if (!raw) { n.style.color='var(--amber)'; n.textContent='⚠️ Cole o gid (ou a URL) da aba PortalAk.'; return; }
+  // Aceita: só o número, ou uma URL contendo gid=NUMERO / #gid=NUMERO
+  let gid = raw;
+  const m = raw.match(/gid=(\d+)/);
+  if (m) gid = m[1];
+  else if (/^\d+$/.test(raw)) gid = raw;
+  else { n.style.color='var(--amber)'; n.textContent='⚠️ Não achei o gid. Cole o número ou a URL com #gid=...'; return; }
   localStorage.setItem('ak_portalak_gid', gid);
   PORTALAK_GID = gid;
-  n.style.color='var(--green)'; n.textContent='✓ gid salvo! Recarregando Portal AK...';
+  // Se colou uma URL completa, guarda ela (planilha pode ser diferente da do WhatsApp)
+  if (/https?:\/\//.test(raw)) {
+    PORTALAK_URL = raw;
+    localStorage.setItem('ak_portalak_url', raw);
+  }
+  n.style.color='var(--green)'; n.textContent='✓ gid '+gid+' salvo! Recarregando Portal AK...';
   // recarrega só o canal (reaproveita loadChannelData)
   loadChannelData();
 }
@@ -624,20 +651,33 @@ async function loadChannelData() {
     } catch(e) { console.warn('Voz load failed:', e); }
   }
 
-  // ── Portal AK (mesma planilha, aba PortalAk via gid) ──
+  // ── Portal AK (aba PortalAk via gid) ──
   try {
-    const portalUrl = buildSheetUrl(CSV_URL, PORTALAK_GID);
+    // Se o usuário colou a URL completa da planilha do Portal AK, usa ela;
+    // senão, assume a MESMA planilha do WhatsApp (URL única) trocando a aba.
+    const baseForPortal = PORTALAK_URL || CSV_URL;
+    const portalUrl = buildSheetUrl(baseForPortal, PORTALAK_GID);
     console.log('Fetching Portal AK from:', portalUrl);
     const text = await fetchCSV(portalUrl, true);
-    if (text) {
+    if (text && text.length > 10 && !text.trimStart().startsWith('<')) {
       portalakData = parsePortalAk(text);
       console.log('Portal AK: linhas-lead geradas:', portalakData.length);
       const pNote = document.getElementById('configNotePortal');
-      if (pNote) { pNote.style.color='var(--green)'; pNote.textContent='✓ Portal AK: '+portalakData.length+' leads carregados'; }
+      if (pNote) {
+        if (portalakData.length) { pNote.style.color='var(--green)'; pNote.textContent='✓ Portal AK: '+portalakData.length+' leads carregados'; }
+        else { pNote.style.color='var(--amber)'; pNote.textContent='⚠️ Conectou mas 0 linhas. Confira se a aba PortalAk está publicada/compartilhada.'; }
+      }
+    } else {
+      const pNote = document.getElementById('configNotePortal');
+      if (pNote) { pNote.style.color='var(--amber)'; pNote.textContent='⚠️ Resposta inválida. Publique a aba (Arquivo→Compartilhar→Publicar na web) ou deixe a planilha pública.'; }
     }
-  } catch(e) { console.warn('Portal AK load failed:', e); }
+  } catch(e) {
+    console.warn('Portal AK load failed:', e);
+    const pNote = document.getElementById('configNotePortal');
+    if (pNote) { pNote.style.color='var(--red)'; pNote.textContent='✗ Erro Portal AK: '+e.message; }
+  }
 
-  if (smsData.length || vozData.length || portalakData.length) renderGeral();
+  if (smsData.length || vozData.length || portalakData.length) { renderAllSourceBars(); renderGeral(); }
 }
 
 function showLoading() {
@@ -699,7 +739,7 @@ function getMonthFromCamp(campName) {
 }
 
 function getCampaigns(data) {
-  const src = data || allData;
+  const src = data || getSourceData();
   const map={};
   src.forEach(r=>{ const n=r['Nome da Campanha']; if(!map[n]) map[n]={name:n,rows:[]}; map[n].rows.push(r); });
   return Object.values(map).sort((a, b) => {
@@ -718,7 +758,7 @@ function getCampaignsByMonth(month) {
 }
 
 function getTmplRank(data) {
-  const src = data || allData;
+  const src = data || getSourceData();
   const map={};
   src.forEach(r=>{ const t=r['Template']; if(!map[t]) map[t]={name:t,rows:[]}; map[t].rows.push(r); });
   return Object.values(map).map(t=>{
@@ -742,6 +782,7 @@ function confLabel(rodadas) {
 
 // ── RENDERS ──────────────────────────────────────────────────────
 function renderAll() {
+  try { renderAllSourceBars(); } catch(e) { console.error('sourceBars:', e); }
   try { renderGeral(); } catch(e) { console.error('renderGeral:', e); }
   try { renderCampCards(); } catch(e) { console.error('renderCampCards:', e); }
   try { renderTemplates(); } catch(e) { console.error('renderTemplates:', e); }
@@ -842,6 +883,14 @@ let chartValManha = null;
 let chartValTarde = null;
 let chartProjecao = null;
 
+// Dataset WhatsApp já filtrado pela fonte (Digitalk / Portal AK / Todos).
+// Usado por Campanhas, Templates e Valores (que sempre operam no WhatsApp).
+function getSourceData() {
+  if (currentSourceFilter === 'digitalk') return allData;
+  if (currentSourceFilter === 'portalak') return portalakData;
+  return allData.concat(portalakData);
+}
+
 function getActiveData() {
   if (activeChannel === 'sms') return smsData;
   if (activeChannel === 'voz') return vozData;
@@ -908,9 +957,9 @@ function renderMonthFilterBar() {
   if (!barEl) return;
   const sourceBtns = (activeChannel === 'whatsapp') ? `
     <span class="filter-label" style="margin-left:14px">Fonte:</span>
-    <button class="filter-btn ${currentSourceFilter==='todos'?'active':''}" onclick="setSourceFilter('todos', this)">Todos</button>
-    <button class="filter-btn ${currentSourceFilter==='digitalk'?'active':''}" onclick="setSourceFilter('digitalk', this)">💬 Digitalk</button>
-    <button class="filter-btn ${currentSourceFilter==='portalak'?'active':''}" onclick="setSourceFilter('portalak', this)">🟢 Portal AK</button>
+    <button class="filter-btn ${currentSourceFilter==='todos'?'active':''}" onclick="setSourceFilter('todos')">Todos</button>
+    <button class="filter-btn ${currentSourceFilter==='digitalk'?'active':''}" onclick="setSourceFilter('digitalk')">💬 Digitalk</button>
+    <button class="filter-btn ${currentSourceFilter==='portalak'?'active':''}" onclick="setSourceFilter('portalak')">🟢 Portal AK</button>
   ` : '';
   barEl.innerHTML = `
     <span class="filter-label">Mês:</span>
@@ -923,9 +972,31 @@ function renderMonthFilterBar() {
   `;
 }
 
-function setSourceFilter(src, btn) {
+function renderSourceBar(barId) {
+  const el = document.getElementById(barId);
+  if (!el) return;
+  el.innerHTML = `
+    <span class="filter-label">Fonte:</span>
+    <button class="filter-btn ${currentSourceFilter==='todos'?'active':''}" onclick="setSourceFilter('todos')">Todos</button>
+    <button class="filter-btn ${currentSourceFilter==='digitalk'?'active':''}" onclick="setSourceFilter('digitalk')">💬 Digitalk</button>
+    <button class="filter-btn ${currentSourceFilter==='portalak'?'active':''}" onclick="setSourceFilter('portalak')">🟢 Portal AK</button>
+  `;
+}
+
+function renderAllSourceBars() {
+  renderSourceBar('campSourceBar');
+  renderSourceBar('tmplSourceBar');
+  renderSourceBar('valSourceBar');
+}
+
+function setSourceFilter(src) {
   currentSourceFilter = src;
-  renderGeral();
+  // re-renderiza tudo que depende da fonte
+  renderAllSourceBars();
+  try { renderGeral(); } catch(e){}
+  try { renderCampCards(); } catch(e){}
+  try { renderTemplates(); } catch(e){}
+  try { renderValores(); } catch(e){}
 }
 
 function renderValoresFilterBar() {
@@ -1414,11 +1485,12 @@ function renderTemplates() {
 function renderValores() {
   const el = document.getElementById('valoresContent');
   if (!el) return;
-  if (!allData.length) { el.innerHTML='<div class="loading"><div class="loading-text">Sem dados carregados.</div></div>'; return; }
+  const sourceData = getSourceData();
+  if (!sourceData.length) { el.innerHTML='<div class="loading"><div class="loading-text">Sem dados carregados.</div></div>'; return; }
 
   renderValoresFilterBar();
 
-  const filteredData = getFilteredData(allData);
+  const filteredData = getFilteredData(sourceData);
   const daily = getDailyData(filteredData);
   const camps = getCampaigns(filteredData);
   const CUSTO = 0.43;
@@ -1571,8 +1643,11 @@ function show(id,tab) {
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   document.getElementById(id).classList.add('active');
   tab.classList.add('active');
-  if (id === 'campanhas' && allData.length) renderCampCards();
-  if (id === 'valores' && allData.length) renderValores();
+  renderAllSourceBars();
+  const hasData = allData.length || portalakData.length;
+  if (id === 'campanhas' && hasData) renderCampCards();
+  if (id === 'valores' && hasData) renderValores();
+  if (id === 'templates' && hasData) renderTemplates();
 }
 
 loadData();

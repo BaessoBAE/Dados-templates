@@ -468,16 +468,34 @@ function parsePortalAk(text) {
     // Se Total_Leads vier vazio, deriva: não enviados + enviados.
     if (!total) total = naoEnv + enviados;
 
-    // Template às vezes vem numérico (contagem) ou vazio — usa a campanha então
-    let baseTemplate = tmpl;
-    if (!baseTemplate || /^\d+$/.test(baseTemplate)) baseTemplate = camp;
-    // Mês CONFIÁVEL: vem da coluna Data_Criacao (formato BR DD/MM/YYYY)
+    // ── Data SEMPRE da coluna B (Data_Criacao) ──
+    // Ex.: "02/06/2026 14:17" → dia "02/06". Ignora a data do nome.
+    const md = data.match(/(\d{1,2})\/(\d{1,2})\/\d{4}/);
+    const diaLabel = md ? (md[1].padStart(2,'0') + '/' + md[2].padStart(2,'0')) : '';
     const mesCriacao = mesFromDataCriacao(data);
+
+    // Nome curto: tira a data e o "00:00:00"/"12:00:00 AM" do nome da campanha,
+    // depois acrescenta a data da coluna B. Ex.: "Prospeccao Clientes PJ 02/06".
+    let nomeCurto = camp
+      .replace(/\d{1,2}\/\d{1,2}\/\d{4}.*$/, '')   // remove data e o que vier depois
+      .replace(/\s+\d{1,2}:\d{2}.*$/, '')          // remove horário solto
+      .trim();
+    if (!nomeCurto) nomeCurto = camp;
+    // Encurta nomes longos conhecidos
+    nomeCurto = nomeCurto
+      .replace(/^Prospeccao Clientes PJ.*$/i, 'Prospecção')
+      .replace(/^Mensagem Sem resposta.*$/i, 'Sem resposta');
+    const nomeExib = diaLabel ? (nomeCurto + ' ' + diaLabel) : nomeCurto;
+
+    // Template: usa o NOME REAL do template como vem (ex.: "vmassiva_pt_7").
+    // Só cai pro nome curto da campanha enquanto a coluna vier vazia/numérica.
+    let baseTemplate = tmpl;
+    if (!baseTemplate || /^\d+$/.test(baseTemplate)) baseTemplate = nomeExib;
     const push = (n, status, engajado) => {
       for (let k=0;k<n;k++) out.push({
-        'Nome da Campanha': camp,
+        'Nome da Campanha': nomeExib,
         'Template': baseTemplate,
-        'ID do Ticket': camp+'|'+data+'|'+status+'|'+(engajado?'e':'')+'|'+k,
+        'ID do Ticket': nomeExib+'|'+data+'|'+status+'|'+(engajado?'e':'')+'|'+k,
         'Data de Criação do Ticket': data,
         'Data de Criação da Campanha': data,
         'Canal do Lead': 'WHATSAPP',
@@ -869,21 +887,39 @@ function getTodayCampaigns(data) {
   };
 }
 
+// Chave/rótulo de DIA para os gráficos por dia.
+// Portal AK: usa a Data_Criacao (DD/MM/YYYY) → rótulo "DD/MM".
+// Digitalk: usa o sufixo DDMM do nome da campanha → rótulo "DD/MM".
+function getDayKey(row) {
+  // 1) Portal AK / linhas com data real
+  if (row.__source === 'portalak') {
+    const d = String(row['Data de Criação do Ticket'] || row['Data de Criação da Campanha'] || '')
+                .match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+    if (d) {
+      const dd = d[1].padStart(2,'0'), mm = d[2].padStart(2,'0');
+      return { sortKey: mm + dd, label: dd + '/' + mm };
+    }
+  }
+  // 2) Digitalk: sufixo DDMM no fim do nome
+  const m = (row['Nome da Campanha'] || '').match(/(\d{4})\s*$/);
+  if (m) {
+    const dd = m[1].slice(0,2), mm = m[1].slice(2,4);
+    return { sortKey: mm + dd, label: dd + '/' + mm };
+  }
+  // 3) fallback: nome inteiro
+  const n = row['Nome da Campanha'] || '—';
+  return { sortKey: 'zzz' + n, label: n };
+}
+
 function getDailyData(data) {
-  const camps = getCampaigns(data);
   const map = {};
-  camps.forEach(c => {
-    const match = c.name.match(/(\d{4})\s*$/);
-    const key = match ? match[1] : c.name;
-    const label = match ? match[1].replace(/(\d{2})(\d{2})/, '$1/$2') : c.name;
-    if (!map[key]) map[key] = { key, label, rows: [] };
-    map[key].rows.push(...c.rows);
+  data.forEach(r => {
+    const { sortKey, label } = getDayKey(r);
+    if (!map[sortKey]) map[sortKey] = { sortKey, label, rows: [] };
+    map[sortKey].rows.push(r);
   });
   return Object.values(map)
-    .sort((a, b) => {
-      const toNum = k => { const dd = parseInt(k.slice(0,2)), mm = parseInt(k.slice(2,4)); return mm * 100 + dd; };
-      return toNum(a.key) - toNum(b.key);
-    })
+    .sort((a, b) => a.sortKey < b.sortKey ? -1 : a.sortKey > b.sortKey ? 1 : 0)
     .map(d => {
       const s = calcStats(d.rows);
       return { label: d.label, ...s };

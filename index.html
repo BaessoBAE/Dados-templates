@@ -239,6 +239,13 @@
     <button class="config-btn" onclick="saveConfig()">Salvar e Conectar</button>
     <div style="font-size:12px;margin-top:.5rem" id="configNote"></div>
   </div>
+  <div class="config-card" style="border-top:2px solid var(--green)">
+    <h3>🟢 Portal AK — aba PortalAk (mesma planilha)</h3>
+    <input type="text" class="config-input" id="portalGid" placeholder="gid da aba PortalAk (ex: 123456789)"/>
+    <div style="font-size:11px;color:var(--muted);margin:.4rem 0">Usa a <strong>mesma URL</strong> do WhatsApp acima, mudando só a aba. Pegue o <strong>gid</strong> da aba <strong>PortalAk</strong> na barra de endereço do Google Sheets (<code>...#gid=NUMERO</code>) e cole aqui.</div>
+    <button class="config-btn" style="background:var(--green)" onclick="savePortalGid()">Salvar Portal AK</button>
+    <div style="font-size:12px;margin-top:.5rem" id="configNotePortal"></div>
+  </div>
   <div class="config-card" style="border-top:2px solid var(--blue)">
     <h3>📱 SMS — URL do CSV (aba SMS)</h3>
     <input type="text" class="config-input" id="csvUrlSms" placeholder="https://docs.google.com/spreadsheets/d/e/XXXXX/pub?gid=XXXXX&single=true&output=csv"/>
@@ -277,14 +284,20 @@ const PROXIES = [
 ];
 
 let CSV_URL = localStorage.getItem('ak_csv_url') || DEFAULT_CSV;
-let allData = [];
+let allData = [];          // Digitalk (WhatsApp, lead-a-lead)
+let portalakData = [];     // Portal AK (convertido de agregado p/ lead-a-lead)
 let smsData = [];
 let vozData = [];
 let activeChannel = 'whatsapp';
 let selectedCamp = null;
 let currentFilter = 'todos';
 let currentMonthFilter = 'all';
+let currentSourceFilter = 'todos';  // 'todos' | 'digitalk' | 'portalak'
 let selectedMonth = null;
+
+// gid da aba PortalAk dentro da MESMA planilha (URL única).
+// Ajuste pela aba ⚙️ Configurar se o gid mudar.
+let PORTALAK_GID = localStorage.getItem('ak_portalak_gid') || '0';
 
 function buildSheetUrl(baseUrl, gid) {
   const base = baseUrl.split('?')[0];
@@ -296,6 +309,7 @@ let CSV_URL_VOZ = localStorage.getItem('ak_csv_voz') || '';
 document.getElementById('csvUrl').value = CSV_URL;
 if (CSV_URL_SMS && document.getElementById('csvUrlSms')) document.getElementById('csvUrlSms').value = CSV_URL_SMS;
 if (CSV_URL_VOZ && document.getElementById('csvUrlVoz')) document.getElementById('csvUrlVoz').value = CSV_URL_VOZ;
+if (document.getElementById('portalGid')) document.getElementById('portalGid').value = (PORTALAK_GID && PORTALAK_GID!=='0') ? PORTALAK_GID : '';
 
 function saveConfig() {
   const url = document.getElementById('csvUrl').value.trim();
@@ -306,6 +320,17 @@ function saveConfig() {
   loadData();
 }
 function note(msg,color){ const n=document.getElementById('configNote'); n.style.color=color||'var(--muted)'; n.textContent=msg; }
+
+function savePortalGid() {
+  const gid = (document.getElementById('portalGid').value || '').trim();
+  const n = document.getElementById('configNotePortal');
+  if (!gid) { n.style.color='var(--amber)'; n.textContent='⚠️ Cole o gid da aba PortalAk.'; return; }
+  localStorage.setItem('ak_portalak_gid', gid);
+  PORTALAK_GID = gid;
+  n.style.color='var(--green)'; n.textContent='✓ gid salvo! Recarregando Portal AK...';
+  // recarrega só o canal (reaproveita loadChannelData)
+  loadChannelData();
+}
 
 function saveConfigSms() {
   const url = document.getElementById('csvUrlSms').value.trim();
@@ -327,34 +352,34 @@ function saveConfigVoz() {
   loadChannelData();
 }
 
+function parseCSVRaw(raw) {
+  const rows = [];
+  let cur = '', inQ = false, row = [];
+  for (let i = 0; i < raw.length; i++) {
+    const c = raw[i];
+    if (c === '"') {
+      if (inQ && raw[i+1] === '"') { cur += '"'; i++; }
+      else inQ = !inQ;
+    } else if (c === ',' && !inQ) {
+      row.push(cur.trim()); cur = '';
+    } else if ((c === '\n' || c === '\r') && !inQ) {
+      if (c === '\r' && raw[i+1] === '\n') i++;
+      if (cur || row.length) { row.push(cur.trim()); rows.push(row); }
+      row = []; cur = '';
+    } else {
+      cur += c;
+    }
+  }
+  if (cur || row.length) { row.push(cur.trim()); rows.push(row); }
+  return rows;
+}
+
 function parseCSV(text) {
   const fixEnc = s => (s||'')
     .replace(/ManhÃ£/g, 'Manhã').replace(/manhÃ£/g, 'manhã')
     .replace(/ManhÃ/g,  'Manhã').replace(/manhÃ/g,  'manhã');
 
-  function parseRows(raw) {
-    const rows = [];
-    let cur = '', inQ = false, row = [];
-    for (let i = 0; i < raw.length; i++) {
-      const c = raw[i];
-      if (c === '"') {
-        if (inQ && raw[i+1] === '"') { cur += '"'; i++; }
-        else inQ = !inQ;
-      } else if (c === ',' && !inQ) {
-        row.push(cur.trim()); cur = '';
-      } else if ((c === '\n' || c === '\r') && !inQ) {
-        if (c === '\r' && raw[i+1] === '\n') i++;
-        if (cur || row.length) { row.push(cur.trim()); rows.push(row); }
-        row = []; cur = '';
-      } else {
-        cur += c;
-      }
-    }
-    if (cur || row.length) { row.push(cur.trim()); rows.push(row); }
-    return rows;
-  }
-
-  const rows = parseRows(text);
+  const rows = parseCSVRaw(text);
   if (rows.length < 2) return [];
   const headers = rows[0];
   return rows.slice(1).map(vals => {
@@ -362,6 +387,88 @@ function parseCSV(text) {
     headers.forEach((h,i) => { obj[h] = fixEnc((vals[i]||'').trim()); });
     return obj;
   }).filter(r => r['Nome da Campanha'] && r['ID do Ticket']);
+}
+
+// ── PORTAL AK ────────────────────────────────────────────────────
+// O Portal AK chega AGREGADO por disparo (1 linha = 1 disparo já somado):
+// Campanha | Data_Criacao | Responsavel | Template | Total_Leads | Nao_Enviados
+// | Enviados | Com_Interesse | Em_Negociacao | Convertidos | Lidos | Entregues
+// | Bloqueados | Erro_Envio
+// Para reaproveitar TODO o resto do dash (que opera lead-a-lead), "explodimos"
+// cada disparo em linhas-lead sintéticas com o Status do Lead correto.
+function num(v){ const n = parseInt(String(v||'').replace(/[^\d-]/g,''),10); return isNaN(n)?0:n; }
+
+function parsePortalAk(text) {
+  const rows = parseCSVRaw(text);
+  if (rows.length < 2) return [];
+  const headers = rows[0].map(h => (h||'').trim());
+  const idx = name => headers.findIndex(h => h.toLowerCase() === name.toLowerCase());
+
+  const iCamp = idx('Campanha'), iData = idx('Data_Criacao'), iResp = idx('Responsavel'),
+        iTmpl = idx('Template'), iTotal = idx('Total_Leads'), iNenv = idx('Nao_Enviados'),
+        iEnv = idx('Enviados'), iInt = idx('Com_Interesse'), iNeg = idx('Em_Negociacao'),
+        iConv = idx('Convertidos'), iLidos = idx('Lidos'), iEntr = idx('Entregues'),
+        iBloq = idx('Bloqueados'), iErro = idx('Erro_Envio');
+
+  const out = [];
+  rows.slice(1).forEach(vals => {
+    const camp = (vals[iCamp]||'').trim();
+    if (!camp) return;
+    const data = (vals[iData]||'').trim();
+    const resp = iResp>=0 ? (vals[iResp]||'').trim() : '';
+    const tmpl = iTmpl>=0 ? (vals[iTmpl]||'').trim() : '';
+
+    let total = num(vals[iTotal]);
+    const naoEnv = num(vals[iNenv]);
+    const enviados = iEnv>=0 ? num(vals[iEnv]) : 0;
+    const erro   = num(vals[iErro]);
+    const bloq   = iBloq>=0 ? num(vals[iBloq]) : 0;
+    const entr   = num(vals[iEntr]);     // entregues (confirmados)
+    const interesse = num(vals[iInt]);
+    const negociacao = num(vals[iNeg]);
+    const convertidos = num(vals[iConv]);
+    // Engajados = teve interação real (interesse / negociação / convertido)
+    const engajados = interesse + negociacao + convertidos;
+    // Se Total_Leads vier vazio, deriva: não enviados + enviados.
+    if (!total) total = naoEnv + enviados;
+
+    // Template às vezes vem numérico (contagem) ou vazio — usa a campanha então
+    let baseTemplate = tmpl;
+    if (!baseTemplate || /^\d+$/.test(baseTemplate)) baseTemplate = camp;
+    const push = (n, status, engajado) => {
+      for (let k=0;k<n;k++) out.push({
+        'Nome da Campanha': camp,
+        'Template': baseTemplate,
+        'ID do Ticket': camp+'|'+data+'|'+status+'|'+(engajado?'e':'')+'|'+k,
+        'Data de Criação do Ticket': data,
+        'Data de Criação da Campanha': data,
+        'Canal do Lead': 'WHATSAPP',
+        'Canal do Ticket': 'whatsapp',
+        'Status do Lead': status,
+        'Engajado': engajado ? 'Sim' : 'Não',
+        '__source': 'portalak'
+      });
+    };
+
+    // 1) Engajados (entregues + interação) — subconjunto de entregues
+    const eng = Math.min(engajados, entr);
+    // 2) Entregues sem engajamento
+    const entregueSimples = Math.max(entr - eng, 0);
+    // 3) Erros de envio
+    const erros = erro;
+    // 4) Bloqueados (contam como falha de entrega, não erro técnico)
+    const bloqueados = bloq;
+    // 5) Resto: não enviados + enviados sem desfecho confirmado
+    let resto = total - eng - entregueSimples - erros - bloqueados;
+    if (resto < 0) resto = 0;
+
+    push(eng, 'engaged', true);
+    push(entregueSimples, 'delivered customer', false);
+    push(erros, 'error', false);
+    push(bloqueados, 'blocked', false);
+    push(resto, 'sent', false);
+  });
+  return out;
 }
 
 async function loadData() {
@@ -516,7 +623,21 @@ async function loadChannelData() {
       }
     } catch(e) { console.warn('Voz load failed:', e); }
   }
-  if (smsData.length || vozData.length) renderGeral();
+
+  // ── Portal AK (mesma planilha, aba PortalAk via gid) ──
+  try {
+    const portalUrl = buildSheetUrl(CSV_URL, PORTALAK_GID);
+    console.log('Fetching Portal AK from:', portalUrl);
+    const text = await fetchCSV(portalUrl, true);
+    if (text) {
+      portalakData = parsePortalAk(text);
+      console.log('Portal AK: linhas-lead geradas:', portalakData.length);
+      const pNote = document.getElementById('configNotePortal');
+      if (pNote) { pNote.style.color='var(--green)'; pNote.textContent='✓ Portal AK: '+portalakData.length+' leads carregados'; }
+    }
+  } catch(e) { console.warn('Portal AK load failed:', e); }
+
+  if (smsData.length || vozData.length || portalakData.length) renderGeral();
 }
 
 function showLoading() {
@@ -563,9 +684,18 @@ function calcStats(rows) {
 }
 
 function getMonthFromCamp(campName) {
-  const m = campName.match(/(\d{4})\s*$/);
-  if (!m) return null;
-  return m[1].slice(2,4);
+  // Digitalk: sufixo DDMM no fim do nome (ex: "...1506")
+  const m = (campName||'').match(/(\d{4})\s*$/);
+  if (m) return m[1].slice(2,4);
+  // Portal AK: data DD/MM/YYYY embutida no nome (ex: "...15/06/2026...")
+  const d = (campName||'').match(/\b(\d{1,2})\/(\d{1,2})\/\d{4}\b/);
+  if (d) {
+    const a = parseInt(d[1],10), b = parseInt(d[2],10);
+    // se o 1º campo > 12 é dia (DD/MM); senão assume MM/DD (formato US)
+    const mm = a > 12 ? b : a;
+    return String(mm).padStart(2,'0');
+  }
+  return null;
 }
 
 function getCampaigns(data) {
@@ -715,11 +845,17 @@ let chartProjecao = null;
 function getActiveData() {
   if (activeChannel === 'sms') return smsData;
   if (activeChannel === 'voz') return vozData;
-  return allData;
+  // WhatsApp: combina Digitalk + Portal AK conforme o filtro de fonte
+  if (currentSourceFilter === 'digitalk') return allData;
+  if (currentSourceFilter === 'portalak') return portalakData;
+  return allData.concat(portalakData);
 }
 
 function renderChannelCards() {
-  const wStats = allData.length ? calcStats(allData) : null;
+  const waData = (currentSourceFilter==='digitalk') ? allData
+               : (currentSourceFilter==='portalak') ? portalakData
+               : allData.concat(portalakData);
+  const wStats = waData.length ? calcStats(waData) : null;
   const sStats = smsData.length ? calcStats(smsData) : null;
   const vStats = vozData.length ? calcStats(vozData) : null;
 
@@ -770,6 +906,12 @@ function switchChannel(ch) {
 function renderMonthFilterBar() {
   const barEl = document.getElementById('geralFilterBar');
   if (!barEl) return;
+  const sourceBtns = (activeChannel === 'whatsapp') ? `
+    <span class="filter-label" style="margin-left:14px">Fonte:</span>
+    <button class="filter-btn ${currentSourceFilter==='todos'?'active':''}" onclick="setSourceFilter('todos', this)">Todos</button>
+    <button class="filter-btn ${currentSourceFilter==='digitalk'?'active':''}" onclick="setSourceFilter('digitalk', this)">💬 Digitalk</button>
+    <button class="filter-btn ${currentSourceFilter==='portalak'?'active':''}" onclick="setSourceFilter('portalak', this)">🟢 Portal AK</button>
+  ` : '';
   barEl.innerHTML = `
     <span class="filter-label">Mês:</span>
     <button class="filter-btn ${currentMonthFilter === 'all' ? 'active' : ''}" onclick="setMonthFilter('all', this)">Todos</button>
@@ -777,7 +919,13 @@ function renderMonthFilterBar() {
     <button class="filter-btn ${currentMonthFilter === '04' ? 'active' : ''}" onclick="setMonthFilter('04', this)">Abril (04)</button>
     <button class="filter-btn ${currentMonthFilter === '05' ? 'active' : ''}" onclick="setMonthFilter('05', this)">Maio (05)</button>
     <button class="filter-btn ${currentMonthFilter === '06' ? 'active' : ''}" onclick="setMonthFilter('06', this)">Junho (06)</button>
+    ${sourceBtns}
   `;
+}
+
+function setSourceFilter(src, btn) {
+  currentSourceFilter = src;
+  renderGeral();
 }
 
 function renderValoresFilterBar() {

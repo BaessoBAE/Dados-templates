@@ -425,6 +425,13 @@ function parseCSV(text) {
 // cada disparo em linhas-lead sintéticas com o Status do Lead correto.
 function num(v){ const n = parseInt(String(v||'').replace(/[^\d-]/g,''),10); return isNaN(n)?0:n; }
 
+// Extrai o mês (MM) da coluna Data_Criacao — formato BR confiável: DD/MM/YYYY [HH:MM]
+function mesFromDataCriacao(s){
+  const m = String(s||'').match(/^\s*(\d{1,2})\/(\d{1,2})\/\d{4}/);
+  if (!m) return null;
+  return String(parseInt(m[2],10)).padStart(2,'0');  // segundo grupo = mês
+}
+
 function parsePortalAk(text) {
   const rows = parseCSVRaw(text);
   if (rows.length < 2) return [];
@@ -462,6 +469,8 @@ function parsePortalAk(text) {
     // Template às vezes vem numérico (contagem) ou vazio — usa a campanha então
     let baseTemplate = tmpl;
     if (!baseTemplate || /^\d+$/.test(baseTemplate)) baseTemplate = camp;
+    // Mês CONFIÁVEL: vem da coluna Data_Criacao (formato BR DD/MM/YYYY)
+    const mesCriacao = mesFromDataCriacao(data);
     const push = (n, status, engajado) => {
       for (let k=0;k<n;k++) out.push({
         'Nome da Campanha': camp,
@@ -473,7 +482,8 @@ function parsePortalAk(text) {
         'Canal do Ticket': 'whatsapp',
         'Status do Lead': status,
         'Engajado': engajado ? 'Sim' : 'Não',
-        '__source': 'portalak'
+        '__source': 'portalak',
+        '__mes': mesCriacao
       });
     };
 
@@ -652,28 +662,47 @@ async function loadChannelData() {
   }
 
   // ── Portal AK (aba PortalAk via gid) ──
+  const pNote = document.getElementById('configNotePortal');
   try {
-    // Se o usuário colou a URL completa da planilha do Portal AK, usa ela;
-    // senão, assume a MESMA planilha do WhatsApp (URL única) trocando a aba.
-    const baseForPortal = PORTALAK_URL || CSV_URL;
-    const portalUrl = buildSheetUrl(baseForPortal, PORTALAK_GID);
-    console.log('Fetching Portal AK from:', portalUrl);
-    const text = await fetchCSV(portalUrl, true);
-    if (text && text.length > 10 && !text.trimStart().startsWith('<')) {
-      portalakData = parsePortalAk(text);
-      console.log('Portal AK: linhas-lead geradas:', portalakData.length);
-      const pNote = document.getElementById('configNotePortal');
-      if (pNote) {
-        if (portalakData.length) { pNote.style.color='var(--green)'; pNote.textContent='✓ Portal AK: '+portalakData.length+' leads carregados'; }
-        else { pNote.style.color='var(--amber)'; pNote.textContent='⚠️ Conectou mas 0 linhas. Confira se a aba PortalAk está publicada/compartilhada.'; }
+    // Monta candidatos de URL em ordem de preferência.
+    // O token de publicação (/pub, .../d/e/2PACX-...) costuma ser o MESMO da
+    // planilha inteira, então a aba PortalAk sai trocando só o gid na URL do
+    // WhatsApp — essa é a forma pública que funciona sem login.
+    const candidates = [];
+    const seen = new Set();
+    const add = u => { if (u && !seen.has(u)) { seen.add(u); candidates.push(u); } };
+
+    // 1) URL publicada do WhatsApp (/pub) + gid do Portal AK  ← preferida
+    add(buildSheetUrl(CSV_URL, PORTALAK_GID));
+    // 2) Se o usuário colou uma URL de publicação própria do Portal AK
+    if (PORTALAK_URL) add(buildSheetUrl(PORTALAK_URL, PORTALAK_GID));
+    // 3) Export direto (só funciona se a planilha de edição for pública p/ qualquer um)
+    if (PORTALAK_URL) {
+      const idm = PORTALAK_URL.match(/\/d\/(?:e\/)?([a-zA-Z0-9_-]+)/);
+      if (idm) add('https://docs.google.com/spreadsheets/d/'+idm[1]+'/export?format=csv&gid='+PORTALAK_GID);
+    }
+
+    let loaded = false;
+    for (const portalUrl of candidates) {
+      console.log('Tentando Portal AK:', portalUrl);
+      let text;
+      try { text = await fetchCSV(portalUrl, true); } catch(e) { continue; }
+      if (!text || text.length < 10 || text.trimStart().startsWith('<')) continue;
+      const parsed = parsePortalAk(text);
+      if (parsed.length) {
+        portalakData = parsed;
+        loaded = true;
+        console.log('✅ Portal AK carregado:', parsed.length, 'leads');
+        if (pNote) { pNote.style.color='var(--green)'; pNote.textContent='✓ Portal AK: '+parsed.length+' leads carregados'; }
+        break;
       }
-    } else {
-      const pNote = document.getElementById('configNotePortal');
-      if (pNote) { pNote.style.color='var(--amber)'; pNote.textContent='⚠️ Resposta inválida. Publique a aba (Arquivo→Compartilhar→Publicar na web) ou deixe a planilha pública.'; }
+    }
+    if (!loaded && pNote) {
+      pNote.style.color='var(--amber)';
+      pNote.textContent='⚠️ Não consegui ler a aba PortalAk. Confirme: (1) Publicar na Web → escolha a aba PortalAk; (2) o gid está certo ('+PORTALAK_GID+').';
     }
   } catch(e) {
     console.warn('Portal AK load failed:', e);
-    const pNote = document.getElementById('configNotePortal');
     if (pNote) { pNote.style.color='var(--red)'; pNote.textContent='✗ Erro Portal AK: '+e.message; }
   }
 
@@ -754,7 +783,10 @@ function getCampaigns(data) {
 }
 
 function getCampaignsByMonth(month) {
-  return getCampaigns().filter(c => getMonthFromCamp(c.name) === month);
+  // Filtra as LINHAS pelo mês (Data_Criacao p/ Portal AK, nome p/ Digitalk),
+  // depois reagrupa em campanhas — assim uma campanha aparece no mês correto.
+  const monthRows = getSourceData().filter(r => getRowMonth(r) === month);
+  return getCampaigns(monthRows);
 }
 
 function getTmplRank(data) {
@@ -1023,13 +1055,16 @@ function setMonthFilter(month, btn) {
   renderGeral();
 }
 
+// Mês de uma linha: prioriza __mes (vindo da Data_Criacao do Portal AK),
+// senão extrai do nome da campanha (Digitalk).
+function getRowMonth(r) {
+  if (r.__mes) return r.__mes;
+  return getMonthFromCamp(r['Nome da Campanha'] || '');
+}
+
 function getFilteredData(data) {
   if (currentMonthFilter === 'all') return data;
-  const camps = getCampaigns(data);
-  const filteredCamps = camps.filter(c => getMonthFromCamp(c.name) === currentMonthFilter);
-  const rows = [];
-  filteredCamps.forEach(c => rows.push(...c.rows));
-  return rows;
+  return data.filter(r => getRowMonth(r) === currentMonthFilter);
 }
 
 function renderGeral() {

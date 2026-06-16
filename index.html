@@ -459,11 +459,14 @@ function parsePortalAk(text) {
     const enviados = iEnv>=0 ? num(vals[iEnv]) : 0;
     const erro   = num(vals[iErro]);
     const bloq   = iBloq>=0 ? num(vals[iBloq]) : 0;
-    const entr   = num(vals[iEntr]);     // entregues (confirmados)
-    const interesse = num(vals[iInt]);
+    const lidos  = iLidos>=0 ? num(vals[iLidos]) : 0;   // K
+    const entrCol = num(vals[iEntr]);                    // L
+    // ENTREGUE = Entregues (L) + Lidos (K) — grupos separados, somam
+    const entr   = entrCol + lidos;
+    const interesse = num(vals[iInt]);                   // H = respondeu
     const negociacao = num(vals[iNeg]);
     const convertidos = num(vals[iConv]);
-    // Engajados = teve interação real (interesse / negociação / convertido)
+    // Engajados/respondeu = Com_Interesse + Em_Negociacao + Convertidos
     const engajados = interesse + negociacao + convertidos;
     // Se Total_Leads vier vazio, deriva: não enviados + enviados.
     if (!total) total = naoEnv + enviados;
@@ -553,7 +556,10 @@ async function loadData() {
 
       if (!json.hasMore) break;
       page++;
-      if (page > 30) { console.warn('Limite de páginas atingido'); break; }
+      // Proteção contra loop infinito (não corta dados reais: o loop já para
+      // sozinho quando hasMore=false ou a página vem vazia).
+      // 500 páginas × 2000 = até 1.000.000 de registros.
+      if (page > 500) { console.warn('Limite de segurança de páginas atingido (500). Se precisar de mais, aumente este teto.'); break; }
     }
 
     if (!allRows.length) throw new Error('Nenhum dado encontrado.');

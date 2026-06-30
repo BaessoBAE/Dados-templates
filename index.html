@@ -531,57 +531,69 @@ function parsePortalAk(text) {
   return out;
 }
 
+// Reconstrói linhas-lead sintéticas a partir do resumo agregado do Apps Script.
+// Cada linha-resumo {campanha,template,dia,hora,canal,status,engajado,n} vira
+// "n" linhas idênticas com os campos que o dashboard consome. Um único ticket
+// sintético por grupo é suficiente porque o dash só usa o ID para CONTAR
+// (rows.length) e filtrar linhas vazias — nunca casa IDs entre fontes.
+function explodeSummary(summaryRows, fixEnc) {
+  const out = [];
+  let seq = 0;
+  summaryRows.forEach(g => {
+    const n = parseInt(g.n, 10) || 0;
+    if (n <= 0) return;
+    const camp = fixEnc(g.campanha || '');
+    if (!camp) return;
+    const tmpl = fixEnc(g.template || '');
+    const status = fixEnc(g.status || '');
+    const eng = fixEnc(g.engajado || '');
+    const canal = fixEnc(g.canal || '');
+    const dia = (g.dia || '').trim();
+    const hora = (g.hora || '').trim();
+    // "Data de Criação do Ticket" preserva dia + hora (o dash extrai HH:MM e DD/MM daqui)
+    const dataTk = dia ? (hora ? dia + ' ' + hora : dia) : '';
+    for (let k = 0; k < n; k++) {
+      out.push({
+        'Nome da Campanha': camp,
+        'ID do Ticket': 'S' + (++seq),
+        'Template': tmpl,
+        'Status do Lead': status,
+        'Engajado': eng,
+        'Canal do Lead': canal,
+        'Canal do Ticket': canal,
+        'Data de Criação do Ticket': dataTk
+      });
+    }
+  });
+  return out;
+}
+
 async function loadData() {
   setStatus('Carregando...', false);
   showLoading();
 
   try {
-    let allRows = [];
-    let page = 0;
-
-    while (true) {
-      const url = `${APPS_SCRIPT_URL}?page=${page}&_=${Date.now()}`;
-      console.log(`📄 Página ${page}...`);
-      setStatus(`Carregando página ${page + 1}...`, false);
-
-      const res = await fetch(url, { signal: AbortSignal.timeout(30000), cache: 'no-store' });
-      if (!res.ok) throw new Error('HTTP ' + res.status);
-      const json = await res.json();
-
-      if (json.error) throw new Error(json.error);
-      if (!json.rows || !json.rows.length) { console.log('Página vazia, parando.'); break; }
-
-      allRows = allRows.concat(json.rows);
-      console.log(`✅ Página ${page}: +${json.rows.length} rows | total: ${allRows.length} | hasMore: ${json.hasMore}`);
-
-      if (!json.hasMore) break;
-      page++;
-      // Proteção contra loop infinito (não corta dados reais: o loop já para
-      // sozinho quando hasMore=false ou a página vem vazia).
-      // 500 páginas × 2000 = até 1.000.000 de registros.
-      if (page > 500) { console.warn('Limite de segurança de páginas atingido (500). Se precisar de mais, aumente este teto.'); break; }
-    }
-
-    if (!allRows.length) throw new Error('Nenhum dado encontrado.');
+    // ── Carga AGREGADA (resumo do Apps Script) ──
+    // O Apps Script agora SOMA as linhas no servidor e devolve um resumo
+    // compacto (algumas centenas de linhas). Aqui "explodimos" cada linha-
+    // resumo de volta em linhas-lead sintéticas, para que TODO o resto do
+    // dashboard (calcStats, getCampaigns, gráficos por dia, etc.) continue
+    // funcionando exatamente como antes.
+    setStatus('Carregando resumo...', false);
+    const url = `${APPS_SCRIPT_URL}?_=${Date.now()}`;
+    const res = await fetch(url, { signal: AbortSignal.timeout(60000), cache: 'no-store' });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const json = await res.json();
+    if (json.error || json.ok === false) throw new Error(json.error || 'Apps Script retornou erro');
+    if (!json.rows || !json.rows.length) throw new Error('Resumo vazio.');
 
     const fixEnc = s => (s||'')
       .replace(/ManhÃ£/g, 'Manhã').replace(/manhÃ£/g, 'manhã')
       .replace(/ManhÃ/g,  'Manhã').replace(/manhÃ/g,  'manhã');
 
-    const mapped = allRows.map(r => {
-        const obj = {};
-        Object.keys(r).forEach(k => { obj[k] = fixEnc(r[k]); });
-        return obj;
-      });
+    allData = explodeSummary(json.rows, fixEnc);
 
-    const semCamp = mapped.filter(r => !r['Nome da Campanha']);
-    const semTicket = mapped.filter(r => r['Nome da Campanha'] && !r['ID do Ticket']);
-    console.log(`🔍 Filtro: ${mapped.length} total | ${semCamp.length} sem campanha | ${semTicket.length} sem ticket`);
-    if (semCamp.length > 0) console.log('Exemplo sem campanha:', JSON.stringify(semCamp[0]));
-    if (semTicket.length > 0) console.log('Exemplo sem ticket:', JSON.stringify(semTicket[0]));
-
-    allData = mapped.filter(r => r['Nome da Campanha'] && r['ID do Ticket']);
-
+    console.log(`📦 Resumo: ${json.rows.length} combinações → ${allData.length} leads`);
     console.log(`📊 Total final: ${allData.length} registros`);
     const campNames = [...new Set(allData.map(r=>r['Nome da Campanha']))].sort();
     console.log('=== CAMPANHAS ===', campNames.length);

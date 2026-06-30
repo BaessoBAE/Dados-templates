@@ -286,7 +286,25 @@ const PROXIES = [
   url => url
 ];
 
-let CSV_URL = localStorage.getItem('ak_csv_url') || DEFAULT_CSV;
+// Normaliza a URL publicada: /pubhtml (página HTML) → /pub?output=csv (CSV).
+// Conserta automaticamente URLs antigas salvas no localStorage.
+function normalizeCsvUrl(u) {
+  if (!u) return u;
+  let s = u.trim();
+  // remove fragmento (#gid=...) que não serve no fetch
+  s = s.split('#')[0];
+  // /pubhtml com ou sem query → /pub + output=csv
+  if (/\/pubhtml(\?|$)/.test(s)) {
+    const q = s.split('?')[1] || '';
+    s = s.replace(/\/pubhtml(\?.*)?$/, '/pub');
+    const gidM = q.match(/gid=(\d+)/);
+    s += '?output=csv' + (gidM ? '&gid=' + gidM[1] + '&single=true' : '');
+  }
+  return s;
+}
+let CSV_URL = normalizeCsvUrl(localStorage.getItem('ak_csv_url') || DEFAULT_CSV);
+// regrava já corrigida, para não voltar ao /pubhtml em recargas futuras
+try { localStorage.setItem('ak_csv_url', CSV_URL); } catch(e) {}
 let allData = [];          // Digitalk (WhatsApp, lead-a-lead)
 let portalakData = [];     // Portal AK (convertido de agregado p/ lead-a-lead)
 let smsData = [];
@@ -580,10 +598,30 @@ async function loadData() {
     // dashboard (calcStats, getCampaigns, gráficos por dia, etc.) continue
     // funcionando exatamente como antes.
     setStatus('Carregando resumo...', false);
-    const url = `${APPS_SCRIPT_URL}?_=${Date.now()}`;
-    const res = await fetch(url, { signal: AbortSignal.timeout(60000), cache: 'no-store' });
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    const json = await res.json();
+    // Tenta a chamada direta ao /exec e, se falhar (CORS/HTTP2/redirect),
+    // tenta via proxies. Só desiste para o fallback CSV se nada funcionar.
+    const scriptAttempts = [
+      u => u,
+      u => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}&_=${Date.now()}`,
+      u => `https://corsproxy.io/?${encodeURIComponent(u)}&_=${Date.now()}`
+    ];
+    let json = null, lastErr = '';
+    for (let a = 0; a < scriptAttempts.length; a++) {
+      try {
+        const url = scriptAttempts[a](`${APPS_SCRIPT_URL}?_=${Date.now()}`);
+        const res = await fetch(url, {
+          signal: AbortSignal.timeout(60000),
+          cache: 'no-store',
+          redirect: 'follow'
+        });
+        if (!res.ok) { lastErr = 'HTTP ' + res.status; continue; }
+        const text = await res.text();
+        if (!text || text.trimStart().startsWith('<')) { lastErr = 'resposta não-JSON'; continue; }
+        json = JSON.parse(text);
+        break;
+      } catch(err) { lastErr = err.message; }
+    }
+    if (!json) throw new Error('Apps Script inacessível: ' + lastErr);
     if (json.error || json.ok === false) throw new Error(json.error || 'Apps Script retornou erro');
     if (!json.rows || !json.rows.length) throw new Error('Resumo vazio.');
 
@@ -614,9 +652,10 @@ async function loadData() {
     url => `https://corsproxy.io/?${encodeURIComponent(url)}&_=${Date.now()}`,
     url => url
   ];
+  const fbUrl = normalizeCsvUrl(CSV_URL);
   for (let i = 0; i < fallbackProxies.length; i++) {
     try {
-      const proxyUrl = fallbackProxies[i](CSV_URL);
+      const proxyUrl = fallbackProxies[i](fbUrl);
       const res = await fetch(proxyUrl, { signal: AbortSignal.timeout(20000), cache: 'no-store' });
       if (!res.ok) throw new Error('HTTP ' + res.status);
       const text = await res.text();

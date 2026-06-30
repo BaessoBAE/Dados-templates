@@ -558,18 +558,30 @@ function explodeSummary(summaryRows, fixEnc) {
   const out = [];
   let seq = 0;
   summaryRows.forEach(g => {
-    const n = parseInt(g.n, 10) || 0;
-    if (n <= 0) return;
-    const camp = fixEnc(g.campanha || '');
+    // Aceita os DOIS formatos:
+    //  • resumo novo: { campanha, template, dia, hora, canal, status, engajado, n }
+    //  • linha crua (Apps Script antigo): { 'Nome da Campanha', 'Template', ... }
+    const isSummary = ('campanha' in g) || ('n' in g);
+    const camp = fixEnc((isSummary ? g.campanha : g['Nome da Campanha']) || '');
     if (!camp) return;
-    const tmpl = fixEnc(g.template || '');
-    const status = fixEnc(g.status || '');
-    const eng = fixEnc(g.engajado || '');
-    const canal = fixEnc(g.canal || '');
-    const dia = (g.dia || '').trim();
-    const hora = (g.hora || '').trim();
-    // "Data de Criação do Ticket" preserva dia + hora (o dash extrai HH:MM e DD/MM daqui)
-    const dataTk = dia ? (hora ? dia + ' ' + hora : dia) : '';
+    // resumo traz contagem em "n"; linha crua = 1 lead
+    const n = isSummary ? (parseInt(g.n, 10) || 0) : 1;
+    if (n <= 0) return;
+
+    const tmpl   = fixEnc((isSummary ? g.template : g['Template']) || '');
+    const status = fixEnc((isSummary ? g.status   : g['Status do Lead']) || '');
+    const eng    = fixEnc((isSummary ? g.engajado : g['Engajado']) || '');
+    const canal  = fixEnc((isSummary ? g.canal    : (g['Canal do Lead'] || g['Canal do Ticket'])) || '');
+
+    let dataTk;
+    if (isSummary) {
+      const dia = (g.dia || '').trim();
+      const hora = (g.hora || '').trim();
+      dataTk = dia ? (hora ? dia + ' ' + hora : dia) : '';
+    } else {
+      dataTk = fixEnc(g['Data de Criação do Ticket'] || '');
+    }
+
     for (let k = 0; k < n; k++) {
       out.push({
         'Nome da Campanha': camp,

@@ -249,27 +249,10 @@
     <button class="config-btn" style="background:var(--green)" onclick="savePortalGid()">Salvar Portal AK</button>
     <div style="font-size:12px;margin-top:.5rem" id="configNotePortal"></div>
   </div>
-  <div class="config-card" style="border-top:2px solid var(--blue)">
-    <h3>📱 SMS — URL do CSV (aba SMS)</h3>
-    <input type="text" class="config-input" id="csvUrlSms" placeholder="https://docs.google.com/spreadsheets/d/e/XXXXX/pub?gid=XXXXX&single=true&output=csv"/>
-    <div style="font-size:11px;color:var(--muted);margin:.4rem 0">Publique a aba <strong>SMS</strong> separadamente e cole a URL aqui. Deixe em branco se ainda não tiver dados.</div>
-    <div style="display:flex;gap:.5rem;flex-wrap:wrap">
-    <button class="config-btn" style="background:var(--blue)" onclick="saveConfigSms()">Salvar SMS</button>
-    <button class="config-btn" style="background:var(--surface2);color:var(--muted);border:1px solid var(--border)" onclick="localStorage.removeItem('ak_csv_sms');document.getElementById('csvUrlSms').value='';document.getElementById('configNoteSms').textContent='Cache limpo. Cole a URL novamente.';smsData=[];renderGeral();">🗑 Limpar</button>
-   </div>
-    <div style="font-size:12px;margin-top:.5rem" id="configNoteSms"></div>
-  </div>
-  <div class="config-card" style="border-top:2px solid var(--purple)">
-    <h3>🎙   Voz — URL do CSV (aba Voz)</h3>
-    <input type="text" class="config-input" id="csvUrlVoz" placeholder="https://docs.google.com/spreadsheets/d/e/XXXXX/pub?gid=XXXXX&single=true&output=csv"/>
-    <div style="font-size:11px;color:var(--muted);margin:.4rem 0">Publique a aba <strong>Voz</strong> separadamente e cole a URL aqui. Deixe em branco se ainda não tiver dados.</div>
-    <button class="config-btn" style="background:var(--purple)" onclick="saveConfigVoz()">Salvar Voz</button>
-    <div style="font-size:12px;margin-top:.5rem" id="configNoteVoz"></div>
-  </div>
   <div class="config-card">
     <h3>📋 Como adicionar novas campanhas</h3>
     <div class="step"><div class="step-num">1</div><div class="step-text">Exporte o relatório da nova campanha do sistema</div></div>
-    <div class="step"><div class="step-num">2</div><div class="step-text">Cole as linhas novas <strong>abaixo das anteriores</strong> na aba correspondente: <span class="ic">Dados</span> (WhatsApp), <span class="ic">SMS</span> ou <span class="ic">Voz</span> — não apague nada</div></div>
+    <div class="step"><div class="step-num">2</div><div class="step-text">Cole as linhas novas <strong>abaixo das anteriores</strong> na aba <span class="ic">Dados</span> — não apague nada</div></div>
     <div class="step"><div class="step-num">3</div><div class="step-text">Clique em <strong>↻ Atualizar</strong> no dashboard 🎉</div></div>
   </div>
 </div>
@@ -339,12 +322,9 @@ function buildSheetUrl(baseUrl, gid) {
   // fallback
   return base + '?gid=' + gid + '&single=true&output=csv';
 }
-let CSV_URL_SMS = localStorage.getItem('ak_csv_sms') || '';
-let CSV_URL_VOZ = localStorage.getItem('ak_csv_voz') || '';
+let CSV_URL_SMS = '', CSV_URL_VOZ = '';  // (SMS/Voz movidos para dashboards separados)
 
 document.getElementById('csvUrl').value = CSV_URL;
-if (CSV_URL_SMS && document.getElementById('csvUrlSms')) document.getElementById('csvUrlSms').value = CSV_URL_SMS;
-if (CSV_URL_VOZ && document.getElementById('csvUrlVoz')) document.getElementById('csvUrlVoz').value = CSV_URL_VOZ;
 if (document.getElementById('portalGid')) document.getElementById('portalGid').value = PORTALAK_URL || ((PORTALAK_GID && PORTALAK_GID!=='0') ? PORTALAK_GID : '');
 
 function saveConfig() {
@@ -376,26 +356,6 @@ function savePortalGid() {
   }
   n.style.color='var(--green)'; n.textContent='✓ gid '+gid+' salvo! Recarregando Portal AK...';
   // recarrega só o canal (reaproveita loadChannelData)
-  loadChannelData();
-}
-
-function saveConfigSms() {
-  const url = document.getElementById('csvUrlSms').value.trim();
-  const n = document.getElementById('configNoteSms');
-  if (!url) { n.style.color='var(--amber)'; n.textContent='⚠️ Cole a URL da aba SMS.'; return; }
-  CSV_URL_SMS = url;
-  localStorage.setItem('ak_csv_sms', url);
-  n.style.color='var(--green)'; n.textContent='✓ URL SMS salva! Carregando...';
-  loadChannelData();
-}
-
-function saveConfigVoz() {
-  const url = document.getElementById('csvUrlVoz').value.trim();
-  const n = document.getElementById('configNoteVoz');
-  if (!url) { n.style.color='var(--amber)'; n.textContent='⚠️ Cole a URL da aba Voz.'; return; }
-  CSV_URL_VOZ = url;
-  localStorage.setItem('ak_csv_voz', url);
-  n.style.color='var(--green)'; n.textContent='✓ URL Voz salva! Carregando...';
   loadChannelData();
 }
 
@@ -598,40 +558,6 @@ function explodeSummary(summaryRows, fixEnc) {
   return out;
 }
 
-// Reconstrói linhas de ligação a partir do resumo de Voz do Apps Script.
-// Cada item {dia,status,agente,n,durSec} vira n linhas com duração média do grupo.
-function explodeVoz(vozRows) {
-  const out = [];
-  vozRows.forEach(g => {
-    const n = parseInt(g.n, 10) || 0;
-    if (n <= 0) return;
-    const status = (g.status || '').trim();
-    const agente = (g.agente || '—').trim();
-    const dia = (g.dia || '').trim();
-    const avgSec = n ? Math.round((parseInt(g.durSec, 10) || 0) / n) : 0;
-    for (let k = 0; k < n; k++) {
-      out.push({ 'Data': dia, 'Status': status, 'Agente': agente, '_sec': avgSec });
-    }
-  });
-  return out;
-}
-
-// Métricas de Voz (conceito diferente do WhatsApp: atendimento, não entrega).
-function calcVozStats(rows) {
-  const total = rows.length;
-  const atendidas = rows.filter(r => (r['Status']||'').toLowerCase() === 'atendida').length;
-  const naoAtendidas = total - atendidas;
-  const secAtend = rows.reduce((s,r) => s + ((r['Status']||'').toLowerCase()==='atendida' ? (r['_sec']||0) : 0), 0);
-  const durMediaSec = atendidas ? Math.round(secAtend / atendidas) : 0;
-  const taxa = total ? (atendidas/total*100) : 0;
-  return { total, atendidas, naoAtendidas, taxa, durMediaSec };
-}
-
-function fmtDur(sec) {
-  sec = sec||0; const m = Math.floor(sec/60), s = sec%60;
-  return m ? `${m}m${s.toString().padStart(2,'0')}s` : `${s}s`;
-}
-
 async function loadData() {
   setStatus('Carregando...', false);
   showLoading();
@@ -669,25 +595,15 @@ async function loadData() {
     }
     if (!json) throw new Error('Apps Script inacessível: ' + lastErr);
     if (json.error || json.ok === false) throw new Error(json.error || 'Apps Script retornou erro');
-    const hasWa  = json.rows && json.rows.length;
-    const hasVoz = json.voz  && json.voz.length;
-    if (!hasWa && !hasVoz) throw new Error('Resumo vazio (cache frio — rode warmCache no Apps Script).');
+    if (!json.rows || !json.rows.length) throw new Error('Resumo vazio (cache frio — rode warmCacheWhats no Apps Script).');
 
     const fixEnc = s => (s||'')
       .replace(/ManhÃ£/g, 'Manhã').replace(/manhÃ£/g, 'manhã')
       .replace(/ManhÃ/g,  'Manhã').replace(/manhÃ/g,  'manhã');
 
-    allData = hasWa ? explodeSummary(json.rows, fixEnc) : [];
+    allData = explodeSummary(json.rows, fixEnc);
 
-    // Voz (aba Ligacoes) — vem no mesmo JSON do Apps Script, já agregado.
-    if (hasVoz) {
-      vozData = explodeVoz(json.voz);
-      console.log(`📞 Voz: ${json.voz.length} combinações → ${vozData.length} ligações`);
-    } else {
-      console.warn('⚠️ Voz sem cache (rode warmCache no Apps Script).');
-    }
-
-    console.log(`📦 Resumo: ${(json.rows||[]).length} combinações → ${allData.length} leads`);
+    console.log(`📦 Resumo: ${json.rows.length} combinações → ${allData.length} leads`);
     console.log(`📊 Total final: ${allData.length} registros`);
     const campNames = [...new Set(allData.map(r=>r['Nome da Campanha']))].sort();
     console.log('=== CAMPANHAS ===', campNames.length);
@@ -763,37 +679,6 @@ async function fetchCSV(url, skipAppsScript=false) {
 }
 
 async function loadChannelData() {
-  if (CSV_URL_SMS) {
-    const smsNote = document.getElementById('configNoteSms');
-    try {
-      if(smsNote) smsNote.textContent = '⏳ Buscando dados SMS...';
-      console.log('Fetching SMS from:', CSV_URL_SMS);
-      const text = await fetchCSV(CSV_URL_SMS, true);
-      console.log('SMS response length:', text ? text.length : 'null');
-      if (text) {
-        smsData = parseCSV(text);
-        console.log('SMS parsed rows:', smsData.length);
-        if(smsData[0]) console.log('SMS first row keys:', Object.keys(smsData[0]).join(', '));
-        if(smsData[0]) console.log('SMS first row sample:', JSON.stringify(smsData[0]).substring(0,200));
-        if(smsNote) smsNote.textContent = '✓ ' + smsData.length + ' registros SMS carregados';
-      } else {
-        if(smsNote) { smsNote.style.color='var(--amber)'; smsNote.textContent = '⚠️ Resposta vazia — verifique a URL'; }
-      }
-    } catch(e) {
-      console.warn('SMS load failed:', e);
-      if(smsNote) { smsNote.style.color="var(--red)"; smsNote.textContent = '✗ Erro: ' + e.message; }
-    }
-  }
-  if (CSV_URL_VOZ) {
-    try {
-      const text = await fetchCSV(CSV_URL_VOZ, true);
-      if (text) {
-        vozData = parseCSV(text);
-        console.log('Voz loaded:', vozData.length, 'rows');
-      }
-    } catch(e) { console.warn('Voz load failed:', e); }
-  }
-
   // ── Portal AK (aba PortalAk via gid) ──
   const pNote = document.getElementById('configNotePortal');
   try {
@@ -839,7 +724,7 @@ async function loadChannelData() {
     if (pNote) { pNote.style.color='var(--red)'; pNote.textContent='✗ Erro Portal AK: '+e.message; }
   }
 
-  if (smsData.length || vozData.length || portalakData.length) { renderAllSourceBars(); renderGeral(); }
+  if (portalakData.length) { renderAllSourceBars(); renderGeral(); }
 }
 
 function showLoading() {
@@ -1075,82 +960,16 @@ function getSourceData() {
 }
 
 function getActiveData() {
-  if (activeChannel === 'sms') return smsData;
-  if (activeChannel === 'voz') return vozData;
   // WhatsApp: combina Digitalk + Portal AK conforme o filtro de fonte
   if (currentSourceFilter === 'digitalk') return allData;
   if (currentSourceFilter === 'portalak') return portalakData;
   return allData.concat(portalakData);
 }
 
-function renderChannelCards() {
-  const waData = (currentSourceFilter==='digitalk') ? allData
-               : (currentSourceFilter==='portalak') ? portalakData
-               : allData.concat(portalakData);
-  const wStats = waData.length ? calcStats(waData) : null;
-  const sStats = smsData.length ? calcStats(smsData) : null;
-  const vStats = vozData.length ? calcVozStats(vozData) : null;
+// Cards de canal removidos: este dashboard é só WhatsApp.
+function renderChannelCards() { return ''; }
 
-  const card = (id, icon, label, color, stats, active) => `
-    <div onclick="switchChannel('${id}')" style="
-      flex:1; min-width:180px; cursor:pointer;
-      background:var(--surface); border:2px solid ${active ? color : 'var(--border)'};
-      border-radius:12px; padding:1.1rem 1.2rem;
-      transition: border-color .2s, transform .15s;
-      transform: ${active ? 'translateY(-2px)' : 'none'};
-      position:relative; overflow:hidden;">
-      <div style="position:absolute;top:0;left:0;right:0;height:3px;background:${active ? color : 'transparent'}"></div>
-      <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.6rem">
-        <span style="font-size:20px">${icon}</span>
-        <span style="font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;font-weight:700;color:${active?'var(--text)':'var(--muted)'}">${label}</span>
-        ${active ? `<span style="margin-left:auto;font-size:9px;background:${color}22;color:${color};padding:2px 7px;border-radius:20px;font-weight:700">ATIVO</span>` : ''}
-      </div>
-      ${id==='voz'
-        ? (stats ? `
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:.4rem">
-          <div>
-            <div style="font-size:9px;color:var(--muted);text-transform:uppercase">Atendimento</div>
-            <div style="font-family:'Plus Jakarta Sans',sans-serif;font-size:18px;font-weight:700;color:${color}">${stats.taxa.toFixed(1)}%</div>
-          </div>
-          <div>
-            <div style="font-size:9px;color:var(--muted);text-transform:uppercase">Ligações</div>
-            <div style="font-family:'Plus Jakarta Sans',sans-serif;font-size:18px;font-weight:700;color:var(--text)">${stats.total.toLocaleString('pt-BR')}</div>
-          </div>
-        </div>
-        <div style="font-size:10px;color:var(--muted);margin-top:.4rem">${stats.atendidas} atendidas · dur. média ${fmtDur(stats.durMediaSec)}</div>
-      ` : `
-        <div style="font-size:12px;color:var(--muted);margin-top:.3rem">Aguardando dados</div>
-        <div style="font-size:10px;color:var(--border);margin-top:.2rem">Cole os dados na aba Ligacoes</div>
-      `)
-        : (stats ? `
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:.4rem">
-          <div>
-            <div style="font-size:9px;color:var(--muted);text-transform:uppercase">Entrega</div>
-            <div style="font-family:'Plus Jakarta Sans',sans-serif;font-size:18px;font-weight:700;color:${color}">${stats.pok.toFixed(1)}%</div>
-          </div>
-          <div>
-            <div style="font-size:9px;color:var(--muted);text-transform:uppercase">Leads</div>
-            <div style="font-family:'Plus Jakarta Sans',sans-serif;font-size:18px;font-weight:700;color:var(--text)">${stats.total.toLocaleString('pt-BR')}</div>
-          </div>
-        </div>
-        <div style="font-size:10px;color:var(--muted);margin-top:.4rem">${stats.engajados} engajados · ${stats.erros} erros</div>
-      ` : `
-        <div style="font-size:12px;color:var(--muted);margin-top:.3rem">Aguardando dados</div>
-        <div style="font-size:10px;color:var(--border);margin-top:.2rem">Configure a URL na aba ⚙️</div>
-      `)}
-    </div>`;
-
-  return `<div style="display:flex;gap:.8rem;flex-wrap:wrap;margin-bottom:1.5rem">
-    ${card('whatsapp','💬','WhatsApp','var(--green)', wStats, activeChannel==='whatsapp')}
-    ${card('sms','📱','SMS','var(--blue)', sStats, activeChannel==='sms')}
-    ${card('voz','🎙️','Voz','var(--purple)', vStats, activeChannel==='voz')}
-  </div>`;
-}
-
-function switchChannel(ch) {
-  activeChannel = ch;
-  renderGeral();
-}
+function switchChannel(ch) { /* canal único (WhatsApp) */ }
 
 function renderMonthFilterBar() {
   const barEl = document.getElementById('geralFilterBar');
@@ -1240,66 +1059,6 @@ function getFilteredData(data) {
   return data.filter(r => getRowMonth(r) === currentMonthFilter);
 }
 
-function renderVozView(rows) {
-  if (!rows.length) {
-    return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:2rem;text-align:center;margin-top:.5rem">
-      <div style="font-size:32px;margin-bottom:.8rem">🎙️</div>
-      <div style="font-family:'Plus Jakarta Sans',sans-serif;font-size:16px;font-weight:700;margin-bottom:.5rem">Sem dados de Voz neste período</div>
-      <div style="font-size:13px;color:var(--muted)">Cole as ligações na aba <strong>Ligacoes</strong> da planilha.</div>
-    </div>`;
-  }
-  const st = calcVozStats(rows);
-
-  // distribuição por status
-  const byStatus = {};
-  rows.forEach(r => { const s = r['Status']||'—'; byStatus[s] = (byStatus[s]||0)+1; });
-  const statusRank = Object.entries(byStatus).sort((a,b)=>b[1]-a[1]);
-
-  // ranking por agente (só atendidas contam duração)
-  const byAg = {};
-  rows.forEach(r => {
-    const a = r['Agente']||'—';
-    if (!byAg[a]) byAg[a] = { total:0, atend:0, sec:0 };
-    byAg[a].total++;
-    if ((r['Status']||'').toLowerCase()==='atendida') { byAg[a].atend++; byAg[a].sec += (r['_sec']||0); }
-  });
-  const agRank = Object.entries(byAg).filter(([a])=>a!=='—'&&a!=='-').sort((a,b)=>b[1].atend-a[1].atend).slice(0,10);
-
-  // volume por dia
-  const byDay = {};
-  rows.forEach(r => { const d=r['Data']||'—'; if(!byDay[d])byDay[d]={t:0,a:0}; byDay[d].t++; if((r['Status']||'').toLowerCase()==='atendida')byDay[d].a++; });
-  const days = Object.entries(byDay).sort((a,b)=>{
-    const pa=a[0].split('/').reverse().join(''), pb=b[0].split('/').reverse().join(''); return pa<pb?-1:1;
-  });
-
-  return `
-    <div class="sec-title" style="margin-top:.5rem">🎙️ Voz — Acumulado</div>
-    <div class="sec-sub">${st.total.toLocaleString('pt-BR')} ligações no total</div>
-    <div class="metrics">
-      <div class="mc r"><div class="mc-label">Total de Ligações</div><div class="mc-val">${st.total.toLocaleString('pt-BR')}</div><div class="mc-note">${days.length} dia(s)</div></div>
-      <div class="mc g"><div class="mc-label">Taxa de Atendimento</div><div class="mc-val">${st.taxa.toFixed(1)}%</div><div class="mc-note">${st.atendidas.toLocaleString('pt-BR')} atendidas</div></div>
-      <div class="mc p"><div class="mc-label">Duração Média</div><div class="mc-val">${fmtDur(st.durMediaSec)}</div><div class="mc-note">por ligação atendida</div></div>
-      <div class="mc a"><div class="mc-label">Não Atendidas</div><div class="mc-val">${st.naoAtendidas.toLocaleString('pt-BR')}</div><div class="mc-note">${(100-st.taxa).toFixed(1)}% do total</div></div>
-    </div>
-
-    <div class="igrid">
-      <div class="icard"><h3><span class="dot dg"></span>Distribuição por Status</h3><ul class="ilist">
-        ${statusRank.map(([s,n])=>`<li class="ii"><strong>${s}</strong> — ${n.toLocaleString('pt-BR')} (${(n/st.total*100).toFixed(1)}%)</li>`).join('')}
-      </ul></div>
-      <div class="icard"><h3><span class="dot dg"></span>Ranking por Agente <span style="font-size:11px;color:var(--muted);font-weight:400">(por atendidas)</span></h3><ul class="ilist">
-        ${agRank.length?agRank.map((a,i)=>`<li class="ii pos"><span class="iico">${i<3?['🥇','🥈','🥉'][i]:'👤'}</span><strong>${a[0]}</strong> — ${a[1].atend} atend. · ${fmtDur(Math.round(a[1].sec/Math.max(1,a[1].atend)))} médio</li>`).join(''):'<li class="ii">Sem agente identificado nas ligações atendidas.</li>'}
-      </ul></div>
-    </div>
-
-    <div class="table-wrap" style="margin-bottom:1.5rem">
-      <div class="table-top"><span class="table-top-title">Volume por Dia</span></div>
-      <div class="table-scroll"><table>
-        <thead><tr><th>Data</th><th>Ligações</th><th>Atendidas</th><th>% Atend.</th></tr></thead>
-        <tbody>${days.map(([d,v])=>`<tr><td><strong>${d}</strong></td><td>${v.t.toLocaleString('pt-BR')}</td><td>${v.a}</td>
-          <td><span style="color:${cOk(v.a/v.t*100)};font-weight:600">${(v.a/v.t*100).toFixed(1)}%</span></td></tr>`).join('')}</tbody>
-      </table></div>
-    </div>`;
-}
 
 function renderGeral() {
   const data = getActiveData();
@@ -1308,27 +1067,13 @@ function renderGeral() {
   renderMonthFilterBar();
 
   if (!data.length) {
-    const isEmpty = activeChannel !== 'whatsapp';
-    el.innerHTML = renderChannelCards() + (isEmpty
-      ? `<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:2rem;text-align:center;margin-top:.5rem">
-          <div style="font-size:32px;margin-bottom:.8rem">${activeChannel==='sms'?'📱':'🎙️'}</div>
-          <div style="font-family:'Plus Jakarta Sans',sans-serif;font-size:16px;font-weight:700;margin-bottom:.5rem">Dados de ${activeChannel.toUpperCase()} ainda não configurados</div>
-          <div style="font-size:13px;color:var(--muted);margin-bottom:1rem">Quando tiver os dados, vá em <strong>⚙️ Configurar</strong> e cole a URL da aba ${activeChannel.toUpperCase()} da planilha.</div>
-        </div>`
-      : `<div style="padding:2rem;text-align:center;color:var(--muted)">Sem dados WhatsApp.</div>`);
+    el.innerHTML = `<div style="padding:2rem;text-align:center;color:var(--muted)">Sem dados WhatsApp. Verifique a aba ⚙️ Configurar.</div>`;
     return;
   }
 
   const filteredData = getFilteredData(data);
 
-  // Voz tem view própria (atendimento, não entrega/templates).
-  if (activeChannel === 'voz') {
-    el.innerHTML = renderChannelCards() + renderVozView(filteredData);
-    return;
-  }
-
   const _orig = allData;
-  if (activeChannel !== 'whatsapp') allData = filteredData;
 
   const camps=getCampaigns(filteredData), s=calcStats(filteredData), rank=getTmplRank(filteredData);
   const top3=rank.slice(0,3), bot=rank.filter(t=>t.pok<75).slice(0,3);
@@ -1777,13 +1522,7 @@ function renderValores() {
   const totalErros = totalLeads - totalEntregues;
   const totalGasto = totalEntregues * CUSTO;
   const totalEconomia = totalErros * CUSTO;
-
-  const CUSTO_VOZ = 0.15;
-  const vozEntregues = vozData.length ? calcStats(vozData).entregues : 0;
-  const vozGasto = vozEntregues * CUSTO_VOZ;
-
-  const smsGasto = smsData.length * CUSTO_SMS;
-  const totalMes = totalGasto + smsGasto + vozGasto;
+  const totalMes = totalGasto;
 
   const taxasEntrega = camps.map(camp => calcStats(camp.rows).pok);
   const mediaEntrega = taxasEntrega.length > 0 ? taxasEntrega.reduce((a,b)=>a+b,0) / taxasEntrega.length : 0;
@@ -1791,33 +1530,17 @@ function renderValores() {
 
   el.innerHTML = `
     <div style="font-family:'Plus Jakarta Sans',sans-serif;font-size:16px;font-weight:700;margin-bottom:.3rem">📊 Resumo Consolidado — Período</div>
-    <div class="sec-sub" style="margin-bottom:1rem">Investimento real acumulado por canal</div>
-    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:.8rem;margin-bottom:1rem">
+    <div class="sec-sub" style="margin-bottom:1rem">Investimento real acumulado (WhatsApp)</div>
+    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:.8rem;margin-bottom:1rem">
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1rem;border-top:2px solid var(--green)">
         <div style="font-size:9px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:.4rem">💬 Total WhatsApp</div>
         <div style="font-family:'Plus Jakarta Sans',sans-serif;font-size:22px;font-weight:700;color:var(--green)">R$ ${totalGasto.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
         <div style="font-size:11px;color:var(--muted);margin-top:.3rem">${totalEntregues.toLocaleString('pt-BR')} msgs · R$ 0,43</div>
       </div>
-      <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1rem;border-top:2px solid var(--blue)">
-        <div style="font-size:9px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:.4rem">📱 Total SMS</div>
-        ${smsData.length
-          ? `<div style="font-family:'Plus Jakarta Sans',sans-serif;font-size:22px;font-weight:700;color:var(--blue)">R$ ${(smsData.length*0.07).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
-             <div style="font-size:11px;color:var(--muted);margin-top:.3rem">${smsData.length.toLocaleString('pt-BR')} msgs · R$ 0,07</div>`
-          : `<div style="font-family:'Plus Jakarta Sans',sans-serif;font-size:16px;font-weight:600;color:var(--muted)">—</div>
-             <div style="font-size:11px;color:var(--border);margin-top:.3rem">sem dados</div>`}
-      </div>
-      <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1rem;border-top:2px solid var(--purple)">
-        <div style="font-size:9px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:.4rem">🎙️ Total Voz</div>
-        ${vozData.length
-          ? `<div style="font-family:'Plus Jakarta Sans',sans-serif;font-size:22px;font-weight:700;color:var(--purple)">R$ ${vozGasto.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
-             <div style="font-size:11px;color:var(--muted);margin-top:.3rem">${vozEntregues.toLocaleString('pt-BR')} ligações</div>`
-          : `<div style="font-family:'Plus Jakarta Sans',sans-serif;font-size:16px;font-weight:600;color:var(--muted)">—</div>
-             <div style="font-size:11px;color:var(--border);margin-top:.3rem">sem dados</div>`}
-      </div>
       <div style="background:var(--surface);border:2px solid var(--amber);border-radius:10px;padding:1rem">
         <div style="font-size:9px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:.4rem">💰 Total Período</div>
         <div style="font-family:'Plus Jakarta Sans',sans-serif;font-size:22px;font-weight:700;color:var(--amber)">R$ ${totalMes.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
-        <div style="font-size:11px;color:var(--muted);margin-top:.3rem">WPP + SMS${vozData.length?' + Voz':''}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:.3rem">WhatsApp</div>
       </div>
     </div>
 

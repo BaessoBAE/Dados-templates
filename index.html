@@ -669,21 +669,25 @@ async function loadData() {
     }
     if (!json) throw new Error('Apps Script inacessível: ' + lastErr);
     if (json.error || json.ok === false) throw new Error(json.error || 'Apps Script retornou erro');
-    if (!json.rows || !json.rows.length) throw new Error('Resumo vazio.');
+    const hasWa  = json.rows && json.rows.length;
+    const hasVoz = json.voz  && json.voz.length;
+    if (!hasWa && !hasVoz) throw new Error('Resumo vazio (cache frio — rode warmCache no Apps Script).');
 
     const fixEnc = s => (s||'')
       .replace(/ManhÃ£/g, 'Manhã').replace(/manhÃ£/g, 'manhã')
       .replace(/ManhÃ/g,  'Manhã').replace(/manhÃ/g,  'manhã');
 
-    allData = explodeSummary(json.rows, fixEnc);
+    allData = hasWa ? explodeSummary(json.rows, fixEnc) : [];
 
     // Voz (aba Ligacoes) — vem no mesmo JSON do Apps Script, já agregado.
-    if (json.voz && json.voz.length) {
+    if (hasVoz) {
       vozData = explodeVoz(json.voz);
       console.log(`📞 Voz: ${json.voz.length} combinações → ${vozData.length} ligações`);
+    } else {
+      console.warn('⚠️ Voz sem cache (rode warmCache no Apps Script).');
     }
 
-    console.log(`📦 Resumo: ${json.rows.length} combinações → ${allData.length} leads`);
+    console.log(`📦 Resumo: ${(json.rows||[]).length} combinações → ${allData.length} leads`);
     console.log(`📊 Total final: ${allData.length} registros`);
     const campNames = [...new Set(allData.map(r=>r['Nome da Campanha']))].sort();
     console.log('=== CAMPANHAS ===', campNames.length);

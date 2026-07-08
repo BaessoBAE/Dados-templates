@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Dashboard Voz — Almeida Krüger</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/>
+<style>
+  :root{
+    --red:#F85149;--red-bg:rgba(248,81,73,.08);--red-border:rgba(248,81,73,.3);
+    --bg:#0D1117;--surface:#161B22;--surface2:#21262D;--surface3:#2D333B;
+    --border:#30363D;--border2:#3D444D;
+    --text:#E6EDF3;--muted:#7D8590;--dim:#484F58;
+    --green:#3FB950;--green-bg:rgba(63,185,80,.1);
+    --amber:#D29922;--amber-bg:rgba(210,153,34,.1);
+    --blue:#58A6FF;--blue-bg:rgba(88,166,255,.1);
+    --purple:#BC8CFF;--purple-bg:rgba(188,140,255,.1);
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+
+  /* HEADER */
+  header{background:var(--surface);border-bottom:1px solid var(--border);padding:0 28px;display:flex;align-items:center;justify-content:space-between;height:60px;position:sticky;top:0;z-index:100}
+  .logo{display:flex;align-items:center;gap:12px}
+  .logo-icon{width:32px;height:32px;background:var(--red);border-radius:6px;display:flex;align-items:center;justify-content:center;font-family:'Plus Jakarta Sans',sans-serif;font-weight:700;font-size:11px;color:#fff}
+  .logo-text{font-family:'Plus Jakarta Sans',sans-serif;font-weight:600;font-size:14px;color:var(--text)}
+  .logo-text span{color:var(--muted);font-weight:400}
+  .header-right{display:flex;align-items:center;gap:14px}
+  .status-dot{width:7px;height:7px;border-radius:50%;background:var(--amber);box-shadow:0 0 6px var(--amber)}
+  .status-dot.ok{background:var(--green);box-shadow:0 0 6px var(--green)}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+  .status-text{font-size:12px;color:var(--muted)}
+  .refresh-btn{background:var(--surface2);border:1px solid var(--border);color:var(--muted);padding:6px 14px;border-radius:6px;font-size:12px;font-weight:500;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;transition:all .15s}
+  .refresh-btn:hover{border-color:var(--border2);color:var(--text)}
+
+  /* TABS */
+  .tabs{display:flex;border-bottom:1px solid var(--border);padding:0 28px;background:var(--surface);overflow-x:auto;gap:4px}
+  .tab{padding:14px 16px;font-size:13px;font-weight:500;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .2s;white-space:nowrap;border-radius:4px 4px 0 0}
+  .tab:hover{color:var(--text);background:rgba(255,255,255,.03)}
+  .tab.active{color:var(--text);border-bottom-color:var(--red)}
+
+  /* LAYOUT */
+  .content{padding:28px;max-width:1220px;margin:0 auto}
+  .panel{display:none}
+  .panel.active{display:block;animation:fadeIn .25s ease}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+
+  /* LOADING / ERROR */
+  .loading{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:5rem;gap:1rem}
+  .spinner{width:36px;height:36px;border:2px solid var(--border);border-top-color:var(--red);border-radius:50%;animation:spin .8s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .loading-text{color:var(--muted);font-size:14px}
+  .loading-sub{color:var(--dim);font-size:12px}
+  .error-box{background:var(--red-bg);border:1px solid var(--red-border);border-radius:10px;padding:2rem;text-align:center}
+  .error-box h3{color:var(--red);font-family:'Plus Jakarta Sans',sans-serif;font-weight:600;margin-bottom:.5rem}
+  .error-box p{color:var(--muted);font-size:13px;line-height:1.7}
+
+  /* SECTION TITLES */
+  .sec-title{font-family:'Plus Jakarta Sans',sans-serif;font-size:18px;font-weight:700;margin-bottom:4px;color:var(--text)}
+  .sec-sub{color:var(--muted);font-size:13px;margin-bottom:1.5rem}
+
+  /* METRIC CARDS */
+  .metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px}
+  .mc{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:18px 20px}
+  .mc-label{font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:8px}
+  .mc-val{font-family:'Fira Mono',monospace;font-size:28px;font-weight:500;line-height:1;margin-bottom:4px}
+  .mc.r .mc-val{color:var(--red)}.mc.g .mc-val{color:var(--green)}.mc.a .mc-val{color:var(--amber)}.mc.b .mc-val{color:var(--blue)}.mc.p .mc-val{color:var(--purple)}
+  .mc-note{font-size:11px;color:var(--muted)}
+
+  /* CAMPAIGN CARDS */
+  .camp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;margin-bottom:24px}
+  .camp-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;cursor:pointer;transition:all .2s}
+  .camp-card:hover{border-color:var(--border2);transform:translateY(-1px)}
+  .camp-card.selected{border-color:var(--red);background:var(--red-bg)}
+  .camp-name{font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;font-weight:600;margin-bottom:3px}
+  .camp-meta{font-size:11px;color:var(--muted);margin-bottom:12px}
+  .camp-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px}
+  .cs{text-align:center;padding:8px 6px;background:var(--surface2);border-radius:6px}
+  .cs-val{font-family:'Fira Mono',monospace;font-size:15px;font-weight:500;line-height:1}
+  .cs-label{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-top:3px}
+
+  /* MONTH SELECTOR */
+  .month-selector{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px}
+  .month-card{background:var(--surface);border:2px solid var(--border);border-radius:10px;padding:20px;cursor:pointer;transition:all .2s}
+  .month-card:hover{border-color:var(--border2);transform:translateY(-1px)}
+  .month-card.active{border-color:var(--red);background:var(--red-bg)}
+  .month-card.active.march{border-color:var(--green);background:var(--green-bg)}
+  .month-card.active.april{border-color:var(--blue);background:var(--blue-bg)}
+  .month-card.active.may{border-color:var(--amber);background:var(--amber-bg)}
+  .month-card.active.june{border-color:var(--purple);background:var(--purple-bg)}
+  .month-icon{font-size:20px;margin-bottom:8px}
+  .month-title{font-family:'Plus Jakarta Sans',sans-serif;font-size:14px;font-weight:600;margin-bottom:3px}
+  .month-sub{font-size:11px;color:var(--muted)}
+
+  /* FILTER BAR */
+  .filter-bar{display:flex;gap:6px;margin-bottom:22px;flex-wrap:wrap;align-items:center}
+  .filter-label{font-size:11px;font-weight:600;color:var(--muted)}
+  .filter-btn{padding:5px 13px;border-radius:20px;font-size:11px;font-weight:500;cursor:pointer;border:1px solid var(--border);background:var(--surface2);color:var(--muted);transition:all .15s;font-family:'Plus Jakarta Sans',sans-serif}
+  .filter-btn:hover{color:var(--text);border-color:var(--border2)}
+  .filter-btn.active{background:var(--red-bg);border-color:var(--red-border);color:var(--red)}
+
+  /* TABLES */
+  .table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:24px}
+  .table-top{padding:12px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.5rem}
+  .table-top-title{font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;font-weight:600;color:var(--text)}
+  .table-scroll{overflow-x:auto}
+  table{width:100%;border-collapse:collapse;min-width:560px}
+  thead th{background:var(--surface2);padding:10px 20px;font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);text-align:left;border-bottom:1px solid var(--border);font-weight:600}
+  tbody tr{border-bottom:1px solid var(--border);transition:background .15s}
+  tbody tr:last-child{border-bottom:none}
+  tbody tr:hover{background:rgba(255,255,255,.02)}
+  tbody td{padding:10px 20px;font-size:13px}
+
+  /* BADGES */
+  .badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:600}
+  .bg{background:var(--green-bg);color:var(--green)}
+  .ba{background:var(--amber-bg);color:var(--amber)}
+  .br{background:var(--red-bg);color:var(--red)}
+
+  tfoot tr { background:var(--surface2) }
+  tfoot td { padding:10px 20px; font-size:13px; border-top:2px solid var(--border2) }
+  .pbar{height:3px;border-radius:2px;background:var(--surface3);margin-top:5px;overflow:hidden}
+  .pfill{height:100%;border-radius:2px}
+
+  /* INSIGHT GRID */
+  .igrid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:24px}
+  .icard{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:18px 20px}
+  .icard h3{font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;font-weight:600;margin-bottom:1rem;display:flex;align-items:center;gap:8px;color:var(--text)}
+  .dot{width:7px;height:7px;border-radius:50%;display:inline-block;flex-shrink:0}
+  .dr{background:var(--red)}.dg{background:var(--green)}
+  .ilist{list-style:none;display:flex;flex-direction:column;gap:8px}
+  .ii{display:flex;gap:9px;font-size:13px;line-height:1.5;color:var(--muted);padding:9px 12px;background:var(--surface2);border-radius:7px;border-left:3px solid var(--border)}
+  .ii.pos{border-left-color:var(--green);color:var(--text)}.ii.crit{border-left-color:var(--red)}.ii.tip{border-left-color:var(--blue)}
+  .iico{font-size:14px;flex-shrink:0;margin-top:1px}
+
+  /* CONFIG */
+  .config-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:20px;margin-bottom:12px}
+  .config-card h3{font-family:'Plus Jakarta Sans',sans-serif;font-size:14px;font-weight:600;margin-bottom:1rem;color:var(--text)}
+  .config-input{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:10px 14px;color:var(--text);font-size:13px;font-family:'Plus Jakarta Sans',sans-serif;margin-bottom:.75rem;outline:none;transition:border-color .2s}
+  .config-input:focus{border-color:var(--red-border)}
+  .config-btn{background:var(--red);color:#fff;border:none;border-radius:6px;padding:9px 20px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif}
+  .step{display:flex;gap:12px;margin-bottom:.75rem;padding:12px;background:var(--surface2);border-radius:8px}
+  .step-num{width:24px;height:24px;border-radius:50%;background:var(--red);color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px}
+  .step-text{font-size:13px;color:var(--muted);line-height:1.7}
+  .step-text strong{color:var(--text)}
+  .ic{background:var(--surface2);padding:2px 7px;border-radius:4px;font-family:'Fira Mono',monospace;font-size:12px;color:var(--amber);border:1px solid var(--border)}
+
+  /* CHARTS */
+  .chart-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:24px}
+  .chart-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:18px 20px}
+  .chart-title{font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;font-weight:600;margin-bottom:16px;display:flex;align-items:center;gap:6px;color:var(--text)}
+  .chart-wrap{position:relative;height:220px}
+
+  /* TODAY SECTION */
+  .today-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:24px}
+  .today-card{background:var(--surface2);border-radius:8px;padding:12px 14px}
+  .today-label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:5px}
+  .today-val{font-family:'Fira Mono',monospace;font-size:22px;font-weight:500;line-height:1;margin-bottom:3px}
+  .today-card.r .today-val{color:var(--red)}.today-card.g .today-val{color:var(--green)}.today-card.a .today-val{color:var(--amber)}.today-card.p .today-val{color:var(--purple)}.today-card.b .today-val{color:var(--blue)}
+  .today-note{font-size:11px;color:var(--muted)}
+  .today-header{font-family:'Plus Jakarta Sans',sans-serif;font-size:14px;font-weight:600;margin-bottom:14px;display:flex;align-items:center;gap:8px;color:var(--text)}
+  .today-section{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:18px 20px;margin-bottom:24px;position:relative;overflow:hidden}
+  .today-section::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--blue),var(--purple))}
+
+  @media(max-width:768px){
+    .metrics{grid-template-columns:1fr 1fr}
+    .igrid{grid-template-columns:1fr}
+    .chart-grid{grid-template-columns:1fr}
+    .today-grid{grid-template-columns:1fr 1fr}
+    .month-selector{grid-template-columns:1fr 1fr}
+    .content{padding:16px}
+    header{padding:0 16px}
+    .tabs{padding:0 16px}
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">
+    <div class="logo-icon">AK</div>
+    <div class="logo-text">Dashboard Voz <span>— Almeida Krüger</span></div>
+  </div>
+  <div class="header-right">
+    <span class="status-dot" id="statusDot"></span>
+    <span class="status-text" id="statusText">Carregando...</span>
+    <button class="refresh-btn" onclick="loadData()">↻ Atualizar</button>
+  </div>
+</header>
+
+<div class="tabs">
+  <div class="tab active">🎙️ Ligações</div>
+</div>
+
+<div style="max-width:1100px;margin:0 auto;padding:24px 28px">
+  <div id="filterBar" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:18px"></div>
+  <div id="content"><div style="padding:2rem;text-align:center;color:var(--muted)">Carregando ligações...</div></div>
+</div>
+
+<script>
+// ===== CONFIG: cole aqui a URL /exec do Apps Script da VOZ =====
+const APPS_SCRIPT_URL = localStorage.getItem('ak_voz_script') || 'https://script.google.com/macros/s/AKfycbzyI4poXQsr-TU0Vt1R7STFsRh47rrjZ2Ht5MVDSTHdNLYbfNyaJuvOPI8nDdeET5tm/exec';
+
+let vozData = [];
+let currentMonthFilter = 'all';
+
+function setStatus(msg, ok) {
+  document.getElementById('statusText').textContent = msg;
+  document.getElementById('statusDot').className = 'status-dot' + (ok ? ' ok' : '');
+}
+
+// ---- helpers de métrica ----
+function durToSec(v){ const s=String(v||'').trim(); if(!s)return 0; const p=s.split(':').map(x=>parseInt(x,10)||0); return p.length===3?p[0]*3600+p[1]*60+p[2]:(p.length===2?p[0]*60+p[1]:(p[0]||0)); }
+function fmtDur(sec){ sec=sec||0; const m=Math.floor(sec/60), s=sec%60; return m?`${m}m${String(s).padStart(2,'0')}s`:`${s}s`; }
+function cOk(v){ return v>=90?'var(--green)':v>=75?'var(--amber)':'var(--red)'; }
+
+// Reconstrói linhas de ligação a partir do resumo agregado {dia,status,agente,n,durSec}
+function explodeVoz(rows){
+  const out=[];
+  rows.forEach(g=>{
+    const n=parseInt(g.n,10)||0; if(n<=0)return;
+    const status=(g.status||'').trim(), agente=(g.agente||'—').trim(), dia=(g.dia||'').trim();
+    const avgSec=n?Math.round((parseInt(g.durSec,10)||0)/n):0;
+    for(let k=0;k<n;k++) out.push({Data:dia,Status:status,Agente:agente,_sec:avgSec});
+  });
+  return out;
+}
+function calcVozStats(rows){
+  const total=rows.length;
+  const atendidas=rows.filter(r=>(r.Status||'').toLowerCase()==='atendida').length;
+  const naoAtendidas=total-atendidas;
+  const secAtend=rows.reduce((s,r)=>s+((r.Status||'').toLowerCase()==='atendida'?(r._sec||0):0),0);
+  const durMediaSec=atendidas?Math.round(secAtend/atendidas):0;
+  const taxa=total?atendidas/total*100:0;
+  return {total,atendidas,naoAtendidas,taxa,durMediaSec};
+}
+function getRowMonth(r){ const m=String(r.Data||'').match(/^\d{1,2}\/(\d{2})\//); return m?m[1]:''; }
+function getFiltered(){ return currentMonthFilter==='all'?vozData:vozData.filter(r=>getRowMonth(r)===currentMonthFilter); }
+
+function setMonthFilter(m){ currentMonthFilter=m; render(); }
+
+function renderFilterBar(){
+  const el=document.getElementById('filterBar');
+  const meses=[...new Set(vozData.map(getRowMonth).filter(Boolean))].sort();
+  const nome={'01':'Jan','02':'Fev','03':'Março','04':'Abril','05':'Maio','06':'Junho','07':'Julho','08':'Ago','09':'Set','10':'Out','11':'Nov','12':'Dez'};
+  el.innerHTML = `<span style="font-size:12px;color:var(--muted);font-weight:600">Mês:</span>
+    <button class="filter-btn ${currentMonthFilter==='all'?'active':''}" onclick="setMonthFilter('all')">Todos</button>` +
+    meses.map(m=>`<button class="filter-btn ${currentMonthFilter===m?'active':''}" onclick="setMonthFilter('${m}')">${nome[m]||m} (${m})</button>`).join('');
+}
+
+function render(){
+  renderFilterBar();
+  const el=document.getElementById('content');
+  const rows=getFiltered();
+  if(!rows.length){ el.innerHTML=`<div style="padding:2rem;text-align:center;color:var(--muted)">Sem ligações neste período.</div>`; return; }
+  const st=calcVozStats(rows);
+
+  const byStatus={}; rows.forEach(r=>{const s=r.Status||'—';byStatus[s]=(byStatus[s]||0)+1;});
+  const statusRank=Object.entries(byStatus).sort((a,b)=>b[1]-a[1]);
+
+  const byAg={};
+  rows.forEach(r=>{const a=r.Agente||'—'; if(!byAg[a])byAg[a]={total:0,atend:0,sec:0}; byAg[a].total++; if((r.Status||'').toLowerCase()==='atendida'){byAg[a].atend++;byAg[a].sec+=(r._sec||0);}});
+  const agRank=Object.entries(byAg).filter(([a])=>a!=='—'&&a!=='-').sort((a,b)=>b[1].atend-a[1].atend).slice(0,10);
+
+  const byDay={};
+  rows.forEach(r=>{const d=r.Data||'—'; if(!byDay[d])byDay[d]={t:0,a:0}; byDay[d].t++; if((r.Status||'').toLowerCase()==='atendida')byDay[d].a++;});
+  const days=Object.entries(byDay).sort((a,b)=>{const pa=a[0].split('/').reverse().join(''),pb=b[0].split('/').reverse().join('');return pa<pb?-1:1;});
+
+  el.innerHTML=`
+    <div class="sec-title" style="margin-top:.2rem">🎙️ Voz — Acumulado</div>
+    <div class="sec-sub">${st.total.toLocaleString('pt-BR')} ligações no total</div>
+    <div class="metrics">
+      <div class="mc b"><div class="mc-label">Total de Ligações</div><div class="mc-val">${st.total.toLocaleString('pt-BR')}</div><div class="mc-note">${days.length} dia(s)</div></div>
+      <div class="mc g"><div class="mc-label">Taxa de Atendimento</div><div class="mc-val">${st.taxa.toFixed(1)}%</div><div class="mc-note">${st.atendidas.toLocaleString('pt-BR')} atendidas</div></div>
+      <div class="mc p"><div class="mc-label">Duração Média</div><div class="mc-val">${fmtDur(st.durMediaSec)}</div><div class="mc-note">por ligação atendida</div></div>
+      <div class="mc a"><div class="mc-label">Não Atendidas</div><div class="mc-val">${st.naoAtendidas.toLocaleString('pt-BR')}</div><div class="mc-note">${(100-st.taxa).toFixed(1)}% do total</div></div>
+    </div>
+
+    <div class="igrid">
+      <div class="icard"><h3><span class="dot dg"></span>Distribuição por Status</h3><ul class="ilist">
+        ${statusRank.map(([s,n])=>`<li class="ii"><strong>${s}</strong> — ${n.toLocaleString('pt-BR')} (${(n/st.total*100).toFixed(1)}%)</li>`).join('')}
+      </ul></div>
+      <div class="icard"><h3><span class="dot dg"></span>Ranking por Agente <span style="font-size:11px;color:var(--muted);font-weight:400">(por atendidas)</span></h3><ul class="ilist">
+        ${agRank.length?agRank.map((a,i)=>`<li class="ii pos"><span class="iico">${i<3?['🥇','🥈','🥉'][i]:'👤'}</span><strong>${a[0]}</strong> — ${a[1].atend} atend. · ${fmtDur(Math.round(a[1].sec/Math.max(1,a[1].atend)))} médio</li>`).join(''):'<li class="ii">Sem agente identificado.</li>'}
+      </ul></div>
+    </div>
+
+    <div class="table-wrap" style="margin-bottom:1.5rem">
+      <div class="table-top"><span class="table-top-title">Volume por Dia</span></div>
+      <div class="table-scroll"><table>
+        <thead><tr><th>Data</th><th>Ligações</th><th>Atendidas</th><th>% Atend.</th></tr></thead>
+        <tbody>${days.map(([d,v])=>`<tr><td><strong>${d}</strong></td><td>${v.t.toLocaleString('pt-BR')}</td><td>${v.a}</td>
+          <td><span style="color:${cOk(v.a/v.t*100)};font-weight:600">${(v.a/v.t*100).toFixed(1)}%</span></td></tr>`).join('')}</tbody>
+      </table></div>
+    </div>`;
+}
+
+async function loadData(){
+  setStatus('Carregando...', false);
+  if(APPS_SCRIPT_URL.includes('COLE_A_URL')){ setStatus('Configure a URL do Apps Script', false); document.getElementById('content').innerHTML='<div style="padding:2rem;text-align:center;color:var(--amber)">Cole a URL /exec do Apps Script da Voz na constante APPS_SCRIPT_URL (ou salve em localStorage ak_voz_script).</div>'; return; }
+  const attempts=[
+    u=>u,
+    u=>`https://api.allorigins.win/raw?url=${encodeURIComponent(u)}&_=${Date.now()}`,
+    u=>`https://corsproxy.io/?${encodeURIComponent(u)}&_=${Date.now()}`
+  ];
+  let json=null,lastErr='';
+  for(const mk of attempts){
+    try{
+      const res=await fetch(mk(`${APPS_SCRIPT_URL}?_=${Date.now()}`),{signal:AbortSignal.timeout(40000),cache:'no-store',redirect:'follow'});
+      if(!res.ok){lastErr='HTTP '+res.status;continue;}
+      const text=await res.text();
+      if(!text||text.trimStart().startsWith('<')){lastErr='resposta não-JSON';continue;}
+      json=JSON.parse(text);break;
+    }catch(e){lastErr=e.message;}
+  }
+  if(!json||json.ok===false){ setStatus('Erro ao carregar', false); document.getElementById('content').innerHTML=`<div style="padding:2rem;text-align:center;color:var(--red)">Falha: ${(json&&json.error)||lastErr}</div>`; return; }
+  if(!json.voz||!json.voz.length){ setStatus('Sem dados (rode warmCacheVoz)', false); document.getElementById('content').innerHTML='<div style="padding:2rem;text-align:center;color:var(--amber)">Cache vazio. Rode warmCacheVoz no Apps Script.</div>'; return; }
+  vozData=explodeVoz(json.voz);
+  console.log(`📞 Voz: ${json.voz.length} combinações → ${vozData.length} ligações`);
+  render();
+  setStatus(`Atualizado ✓ — ${vozData.length.toLocaleString('pt-BR')} ligações`, true);
+}
+
+loadData();
+</script>
+</body>
+</html>
